@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NOCTÁRIA — A Academia das Mil Portas</title>
+    <meta name="description" content="Um jogo narrativo de fantasia gótica, exploração e mistérios sobrenaturais na Academia de Noctária." />
+    <!-- Google Fonts for Gothic Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/main.css">
+  </head>
+  <body>
+    <div id="app">
+      <!-- Ambient Fog / Atmosphere overlay -->
+      <div class="ambient-fog"></div>
+
+      <!-- Notifications container -->
+      <div id="notifications" class="notification-container"></div>
+
+      <!-- Main Game Container managed by JavaScript -->
+      <div id="game-root"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
