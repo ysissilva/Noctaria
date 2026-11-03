@@ -328,38 +328,35 @@ class NoctariaGame {
       <div class="menu-screen" id="menu-screen" style="background-image: url('/assets/images/menu_bg.jpg');">
         <div class="menu-overlay"></div>
 
-        <header class="menu-header">
-          <h1 class="game-title">NOCTÁRIA</h1>
-          <h2 class="game-subtitle">A ACADEMIA DAS MIL PORTAS</h2>
-          <p class="game-tagline">“A magia esqueceu seu nome. Você não esqueceu o dela.”</p>
-        </header>
+        <div class="menu-container">
+          <header class="menu-header">
+            <h1 class="game-title">NOCTÁRIA</h1>
+            <h2 class="game-subtitle">A ACADEMIA DAS MIL PORTAS</h2>
+            <p class="game-tagline">“A magia esqueceu seu nome. Você não esqueceu o dela.”</p>
+          </header>
 
-        <nav class="menu-actions" aria-label="Menu Principal">
-          <button class="btn-gothic btn-primary" id="btn-start-game">
-            <span>INICIAR AVENTURA</span>
-            <span class="btn-icon">✦</span>
-          </button>
+          <nav class="menu-actions" aria-label="Menu Principal">
+            <button class="btn-gothic btn-primary" id="btn-start-game">
+              <span>INICIAR AVENTURA</span>
+              <span class="btn-icon">✦</span>
+            </button>
 
-          <button class="btn-gothic" id="btn-continue-game" ${hasSavedGame ? '' : 'disabled'}>
-            <span>CONTINUAR</span>
-            <span class="btn-icon">🕮</span>
-          </button>
+            <button class="btn-gothic" id="btn-continue-game" ${hasSavedGame ? '' : 'disabled'}>
+              <span>CONTINUAR</span>
+              <span class="btn-icon">🕮</span>
+            </button>
 
-          <button class="btn-gothic" id="btn-characters">
-            <span>PERSONAGENS</span>
-            <span class="btn-icon">👥</span>
-          </button>
+            <button class="btn-gothic" id="btn-characters">
+              <span>PERSONAGENS</span>
+              <span class="btn-icon">👥</span>
+            </button>
 
-          <button class="btn-gothic" id="btn-settings">
-            <span>CONFIGURAÇÕES</span>
-            <span class="btn-icon">⚙</span>
-          </button>
-
-          <button class="btn-gothic" id="btn-credits">
-            <span>CRÉDITOS</span>
-            <span class="btn-icon">📜</span>
-          </button>
-        </nav>
+            <button class="btn-gothic" id="btn-settings">
+              <span>CONFIGURAÇÕES</span>
+              <span class="btn-icon">⚙</span>
+            </button>
+          </nav>
+        </div>
       </div>
     `;
 
@@ -384,7 +381,6 @@ class NoctariaGame {
 
     document.getElementById('btn-characters').onclick = () => this.openCharactersModal();
     document.getElementById('btn-settings').onclick = () => this.openSettingsModal();
-    document.getElementById('btn-credits').onclick = () => this.openCreditsModal();
   }
 
   // --- CENA JOGÁVEL E VIEWPORT ---

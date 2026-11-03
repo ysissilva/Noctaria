@@ -80,9 +80,12 @@ body, html {
   background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  align-items: center;
   z-index: 10;
   transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .menu-screen.fade-out {
@@ -102,13 +105,31 @@ body, html {
   pointer-events: none;
 }
 
-/* 5.2. Posicionamento do título: canto superior esquerdo (5% larg, 6% alt) */
-.menu-header {
-  position: absolute;
-  top: 6%;
-  left: 5%;
+/* Container centralizado: Título + Botões no centro horizontal e vertical da tela */
+.menu-container {
+  position: relative;
   z-index: 12;
-  max-width: 650px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 1200px;
+  width: 100%;
+  gap: 2.2rem;
+  pointer-events: auto;
+}
+
+/* 5.2. Posicionamento do título: centralizado */
+.menu-header {
+  position: relative;
+  z-index: 12;
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   pointer-events: auto;
 }
 
@@ -124,6 +145,7 @@ body, html {
   filter: drop-shadow(0 2px 14px rgba(165, 138, 232, 0.35));
   margin-bottom: 0.3rem;
   text-transform: uppercase;
+  text-align: center;
 }
 
 .game-subtitle {
@@ -135,6 +157,7 @@ body, html {
   text-transform: uppercase;
   margin-bottom: 1.2rem;
   text-shadow: 0 2px 8px rgba(8, 12, 29, 0.9);
+  text-align: center;
 }
 
 /* 5.3 Frase narrativa */
@@ -146,37 +169,42 @@ body, html {
   opacity: 0.82;
   line-height: 1.5;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-  border-left: 2px solid var(--color-arcane-purple);
-  padding-left: 14px;
+  text-align: center;
+  border-left: none;
+  padding-left: 0;
 }
 
-/* 5.4 Botões do menu */
+/* 5.4 Botões do menu organizados horizontalmente */
 .menu-actions {
-  position: absolute;
-  bottom: 8%;
-  left: 5%;
+  position: relative;
   z-index: 12;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
   gap: 14px;
-  width: 290px;
+  width: 100%;
+  max-width: 1100px;
 }
 
 .btn-gothic {
   position: relative;
   font-family: var(--font-ui);
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   letter-spacing: 0.12em;
-  padding: 14px 24px;
+  padding: 12px 24px;
   color: var(--color-lunar-white);
   background: rgba(16, 23, 47, 0.85);
   border: 1px solid rgba(183, 183, 200, 0.3);
-  border-radius: 4px;
+  border-radius: 999px;
   cursor: pointer;
-  text-align: left;
-  display: flex;
+  text-align: center;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow: 0 4px 15px rgba(8, 12, 29, 0.6);
   backdrop-filter: blur(8px);
@@ -186,7 +214,7 @@ body, html {
   background: rgba(36, 59, 112, 0.9);
   border-color: var(--color-luminous-purple);
   box-shadow: 0 0 20px rgba(165, 138, 232, 0.4);
-  transform: translateX(6px);
+  transform: translateY(-4px);
   color: #fff;
 }
 
@@ -1024,14 +1052,16 @@ body, html {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .menu-header {
-    top: 4%;
-    left: 5%;
-    right: 5%;
+  .menu-container {
+    gap: 1.5rem;
+    padding: 12px;
   }
   .menu-actions {
-    bottom: 4%;
-    width: 90%;
+    gap: 10px;
+  }
+  .btn-gothic {
+    padding: 10px 16px;
+    font-size: 0.88rem;
   }
   .dialogue-overlay {
     flex-direction: column;
