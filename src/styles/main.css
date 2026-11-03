@@ -861,30 +861,61 @@ body, html {
 }
 
 /* Letter inspect view modal */
+.inspect-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inspect-illustration-wrapper {
+  position: relative;
+  width: 100%;
+  max-height: 280px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-arcane-purple);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 15px rgba(165, 138, 232, 0.2);
+}
+
+.inspect-illustration-img {
+  width: 100%;
+  height: 280px;
+  object-fit: cover;
+  display: block;
+}
+
+.inspect-illustration-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(8, 12, 29, 0.9) 100%);
+  pointer-events: none;
+}
+
 .letter-parchment {
   background: #151829;
-  border: 2px solid #5376C8;
+  border: 1px solid rgba(83, 118, 200, 0.5);
+  border-left: 4px solid var(--color-luminous-purple);
   border-radius: 6px;
-  padding: 28px;
+  padding: 24px 28px;
   color: #E8E8F2;
   box-shadow: inset 0 0 30px rgba(8, 12, 29, 0.9);
   font-family: var(--font-text);
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   line-height: 1.8;
   font-style: italic;
   position: relative;
 }
 
 .letter-parchment::before {
-  content: 'NOCTÁRIA • ARCHIVUM';
+  content: 'NOCTÁRIA • REGISTRO ARCANO';
   position: absolute;
   top: 10px;
   right: 18px;
   font-family: var(--font-title);
   font-size: 0.7rem;
   letter-spacing: 0.2em;
-  color: var(--color-text-dim);
-  opacity: 0.5;
+  color: var(--color-luminous-purple);
+  opacity: 0.6;
 }
 
 /* Characters Modal & Gallery */
@@ -1348,15 +1379,47 @@ body, html {
   background: rgba(16, 23, 47, 0.85);
   border: 1px solid rgba(183, 183, 200, 0.25);
   border-radius: 6px;
-  padding: 16px;
+  overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-card-thumb-wrapper {
+  width: 100%;
+  height: 90px;
+  position: relative;
+  overflow: hidden;
+  background: #080c1d;
+}
+
+.map-card-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.map-card:hover:not(.locked) .map-card-thumb-img {
+  transform: scale(1.08);
+}
+
+.map-card-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 40%, rgba(16, 23, 47, 0.95) 100%);
+}
+
+.map-card-body {
+  padding: 12px 14px;
 }
 
 .map-card:hover:not(.locked) {
   border-color: var(--color-luminous-purple);
   background: rgba(36, 59, 112, 0.5);
   transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(165, 138, 232, 0.25);
 }
 
 .map-card.current {
@@ -1371,16 +1434,16 @@ body, html {
 }
 
 .map-card-phase {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--color-luminous-purple);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .map-card-name {
   font-family: var(--font-title);
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #fff;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }

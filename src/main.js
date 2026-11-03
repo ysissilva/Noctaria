@@ -1,6 +1,6 @@
 import { CHARACTERS, SPELLS_DATABASE, PHASES_CONFIG, INITIAL_STATE } from './data/gameState.js';
 import { DIALOGUES } from './data/dialogues.js';
-import { SCENE_BACKGROUNDS } from './data/sceneAssets.js';
+import { SCENE_BACKGROUNDS, STORY_ILLUSTRATIONS } from './data/sceneAssets.js';
 import { PUZZLES } from './data/puzzles.js';
 
 class NoctariaGame {
@@ -797,7 +797,8 @@ class NoctariaGame {
     this.openInspectModal(
       'Carta Caída na Escadaria',
       'Um envelope sem selo oficial de Noctária. A caligrafia é nervosa, traçada com tinta púrpura:\n\n“Quando o grande sino soar treze badaladas, não corra para as salas comuns. Procure a porta que não consta nos diagramas da fundação. Eles apagam o que não conseguem controlar.”',
-      'Um primeiro indício vital foi gravado no seu diário de bordo.'
+      'Um primeiro indício vital foi gravado no seu diário de bordo.',
+      STORY_ILLUSTRATIONS.prologue_letter()
     );
     this.addClue({
       id: 'clue_thirteen_chimes_warning',
@@ -838,7 +839,8 @@ class NoctariaGame {
     this.openInspectModal(
       'A Porta Fantasma',
       'Uma colossal moldura de pedra rúnica com entalhes de treze estrelas materializou-se no meio do saguão! Conforme você dá o primeiro passo em direção à maçaneta de prata, o ar vibra e a porta se dissolve no nada, deixando apenas cinzas flutuantes.',
-      'O Prólogo foi concluído com sucesso. O Salão das Cinzas e o mistério de Seraphine aguardam você!'
+      'O Prólogo foi concluído com sucesso. O Salão das Cinzas e o mistério de Seraphine aguardam você!',
+      STORY_ILLUSTRATIONS.phantom_door()
     );
     this.updateQuestStep(3);
     this.completeCurrentPhase();
@@ -850,7 +852,8 @@ class NoctariaGame {
     this.openInspectModal(
       'Mural de Avisos dos Alunos',
       'Dezenas de panfletos sobre aulas de astrologia, duelos rúnicos e toques de recolher. No canto inferior, um aviso amarelado de mérito acadêmico teve o nome da aluna premiada riscado à tinta preta. Sob a luz inclinada, ainda é possível ler: "...phíne Ashf...d".',
-      'Pista anotada: Parte do nome oculto foi resgatado.'
+      'Pista anotada: Parte do nome oculto foi resgatado.',
+      STORY_ILLUSTRATIONS.notice_board()
     );
     this.addClue({
       id: 'clue_mural_name',
@@ -867,7 +870,8 @@ class NoctariaGame {
     this.openInspectModal(
       'Retrato Adulterado',
       'Uma pintura a óleo da turma honorária de três anos atrás. O rosto da estudante que segura o astrolábio foi meticulosamente raspado com lâmina. No verso da moldura de mogno, uma inscrição a lápis diz: "S. A. — Turma 42".',
-      'As iniciais batem exatamente com as letras encontradas no mural!'
+      'As iniciais batem exatamente com as letras encontradas no mural!',
+      STORY_ILLUSTRATIONS.erased_portrait()
     );
     this.addClue({
       id: 'clue_portrait_initials',
@@ -884,7 +888,8 @@ class NoctariaGame {
     this.openInspectModal(
       'Livro de Matrículas Oficial de Noctária',
       'Um tomo solene encadernado em couro negro. Ao folhear as matrículas, você percebe que a folha referente ao número 42 foi arrancada à força rente à lombada. Alguém deixou um bilhete dobrado na fresta:\n\n“Ela não atravessou a porta sozinha.”',
-      'A prova definitiva de que a aluna foi apagada dos registros públicos!'
+      'A prova definitiva de que a aluna foi apagada dos registros públicos!',
+      STORY_ILLUSTRATIONS.altered_ledger()
     );
     this.addClue({
       id: 'clue_altered_ledger',
@@ -1031,7 +1036,8 @@ class NoctariaGame {
         this.openInspectModal(
           '✦ Feitiço REVELARE Aprendido! ✦',
           'As palavras arcanas ressoam na sua mente em harmonia perfeita:\n\n“Quando as sombras cobrirem os olhos dos mundanos, rasgue o véu das pedras com a palavra ancestral e o que foi apagado clamará em luz violeta: REVELARE.”\n\nAgora você pode ativar o feitiço REVELARE na barra inferior a qualquer momento para expor runas invisíveis e passagens seladas!',
-          'O Laboratório de Alquimia foi destrancado!'
+          'O Laboratório de Alquimia foi destrancado!',
+          STORY_ILLUSTRATIONS.spell_revelare()
         );
         this.completeCurrentPhase();
       } else {
@@ -1059,7 +1065,8 @@ class NoctariaGame {
       this.openInspectModal(
         'Poção da Lembrança Pronta',
         'O elixir brilha com uma tonalidade azul-cobalto luminescente. A poção já foi destilada com sucesso!',
-        'A visão sobre Seraphine e a Chave Dimensional já foi gravada em seu diário.'
+        'A visão sobre Seraphine e a Chave Dimensional já foi gravada em seu diário.',
+        STORY_ILLUSTRATIONS.memory_potion()
       );
       return;
     }
@@ -1210,7 +1217,8 @@ class NoctariaGame {
     this.openInspectModal(
       'Visão de Memória Recuperada',
       text,
-      'Fase 3 Concluída! Agora você precisa confrontar Elias no Dormitório da Noite.'
+      'Fase 3 Concluída! Agora você precisa confrontar Elias no Dormitório da Noite.',
+      STORY_ILLUSTRATIONS.memory_potion()
     );
     this.completeCurrentPhase();
   }
@@ -1261,7 +1269,8 @@ class NoctariaGame {
       this.openInspectModal(
         'Diário Secreto da Linhagem Crowe',
         'Você abre o pesado baú de ferro e encontra o diário de couro gasto de Elias:\n\n“A Diretora Morgana planeja consumir a memória de mais sete estudantes para manter a galeria estável. Seraphine me implorou para esconder a Chave de Ébano. Se ela for capturada, caberá a mim entregar a chave àquele que carregar a carta das treze estrelas.”',
-        'Você agora possui a prova necessária para conversar com Elias!'
+        'Você agora possui a prova necessária para conversar com Elias!',
+        STORY_ILLUSTRATIONS.crowe_diary()
       );
       this.renderSceneInteractiveElements();
     } else {
@@ -1372,7 +1381,8 @@ class NoctariaGame {
         this.openInspectModal(
           '✦ Gravação Mágica Manifestada! ✦',
           'Um espectro prateado se ergue do espelho trincado:\n\nA figura jovem da Diretora Morgana Vale entoa o cântico proibido enquanto almas de alunos se dissipam em fumaça violeta. Ela diz:\n\n“Que o sacrifício mantenha o limiar fechado. Que ninguém nunca saiba o que repousa do outro lado.”\n\nCom o alinhamento, o Segundo Fragmento de Chave caiu sobre o pedestal!',
-          'A Galeria das Mil Portas foi desbloqueada!'
+          'A Galeria das Mil Portas foi desbloqueada!',
+          STORY_ILLUSTRATIONS.morgana_mirror_spectral()
         );
         this.completeCurrentPhase();
       } else {
@@ -1405,7 +1415,8 @@ class NoctariaGame {
       this.openInspectModal(
         door.name,
         `${door.desc}\n\nSom ressonante: ${door.sound}\n\nA Chave de Ébano ressoa fervorosamente no seu bolso! Use o feitiço APERTURA para quebrar o selo da Porta das Estrelas!`,
-        'Esta é a porta que conduz à dimensão do Entretempo!'
+        'Esta é a porta que conduz à dimensão do Entretempo!',
+        STORY_ILLUSTRATIONS.star_pendant()
       );
     } else {
       this.flags.doorsExamined[door.id] = true;
@@ -1436,17 +1447,23 @@ class NoctariaGame {
     if (echoNumber === 1) {
       this.openInspectModal(
         'Eco Temporal 1: O Segredo do Ritual',
-        'O feitiço MEMORIA materializa o eco de Seraphine nos arquivos proibidos:\n\n“Eles mentiram para todos nós... A academia não é apenas um santuário de magia; é uma prisão construída sobre a garganta de uma criatura cósmica. O ritual das treze badaladas precisa das nossas memórias como alimento!”'
+        'O feitiço MEMORIA materializa o eco de Seraphine nos arquivos proibidos:\n\n“Eles mentiram para todos nós... A academia não é apenas um santuário de magia; é uma prisão construída sobre a garganta de uma criatura cósmica. O ritual das treze badaladas precisa das nossas memórias como alimento!”',
+        'Fragmento de memória restaurado.',
+        STORY_ILLUSTRATIONS.timeless_echo()
       );
     } else if (echoNumber === 2) {
       this.openInspectModal(
         'Eco Temporal 2: A Traição de Morgana',
-        'O eco mostra a Diretora Morgana selando as portas:\n\n“Sinto muito, Seraphine. Você era a mais promissora. Mas se você revelar isso aos alunos, o pânico quebrará os pilares de contenção antes do solstício.”'
+        'O eco mostra a Diretora Morgana selando as portas:\n\n“Sinto muito, Seraphine. Você era a mais promissora. Mas se você revelar isso aos alunos, o pânico quebrará os pilares de contenção antes do solstício.”',
+        'Fragmento de memória restaurado.',
+        STORY_ILLUSTRATIONS.timeless_echo()
       );
     } else if (echoNumber === 3) {
       this.openInspectModal(
         'Eco Temporal 3: O Selamento de Seraphine',
-        'Seraphine grava sua última mensagem na carta antes de ser sugada pelo portal:\n\n“Não poderei voltar... mas deixarei a carta nos portões da entrada. Um dia, outro estudante com olhos atentos encontrará o caminho.”'
+        'Seraphine grava sua última mensagem na carta antes de ser sugada pelo portal:\n\n“Não poderei voltar... mas deixarei a carta nos portões da entrada. Um dia, outro estudante com olhos atentos encontrará o caminho.”',
+        'Fragmento de memória restaurado.',
+        STORY_ILLUSTRATIONS.timeless_echo()
       );
     }
 
@@ -1635,8 +1652,11 @@ class NoctariaGame {
     }
 
     const html = `
-      <div style="text-align:center; padding:16px 0;">
-        <div style="font-size:3.5rem; color:#4ef0c4; margin-bottom:12px;">✦ ✦ ✦</div>
+      <div style="text-align:center; padding:10px 0;">
+        <div class="inspect-illustration-wrapper" style="max-height:220px; margin-bottom:16px;">
+          <img src="${STORY_ILLUSTRATIONS.ending_choice()}" alt="${title}" class="inspect-illustration-img" style="height:220px;" />
+          <div class="inspect-illustration-overlay"></div>
+        </div>
         <h2 style="font-family:var(--font-title); font-size:1.8rem; color:#fff; margin-bottom:16px;">${title}</h2>
         <div style="background:rgba(8,12,29,0.85); border:1px solid var(--color-arcane-purple); padding:20px; border-radius:6px; max-width:680px; margin:0 auto 24px auto; text-align:left; line-height:1.8; color:var(--color-lunar-white); font-size:1.05rem;">
           ${cinematicText.replace(/\n\n/g, '<br><br>')}
@@ -1662,7 +1682,8 @@ class NoctariaGame {
     this.openInspectModal(
       'A Nova Carta sem Remetente',
       'A luz suave da alvorada entra pela janela do seu aposento em Noctária. Sobre a escrivaninha de mogno, uma nova carta de pergaminho negro repousa ao lado da vela apagada.\n\nO selo de cera violeta traz novamente o brasão de treze estrelas... Mas agora a inscrição em tinta prateada viva diz:\n\n“O limiar foi apenas o primeiro passo. As Mil Portas agora conhecem o seu reflexo. O que despertou do outro lado aguarda o seu chamado.”',
-      'Um convite para as fronteiras desconhecidas que existem além do mapa de Noctária.'
+      'Um convite para as fronteiras desconhecidas que existem além do mapa de Noctária.',
+      STORY_ILLUSTRATIONS.epilogue_letter()
     );
   }
 
@@ -1672,7 +1693,8 @@ class NoctariaGame {
     this.openInspectModal(
       'A Chave Prateada Impossível',
       'Uma chave forjada em prata cósmica, fria ao toque e incrivelmente leve. Suas ranhuras têm uma geometria tridimensional impossível que parece mudar de forma conforme a luz do amanhecer incide sobre ela.\n\nEla não se encaixa em nenhuma fechadura da academia existente na Terra...',
-      'Esta chave foi adicionada permanentemente às suas relíquias arcanas.'
+      'Esta chave foi adicionada permanentemente às suas relíquias arcanas.',
+      STORY_ILLUSTRATIONS.epilogue_letter()
     );
     this.addInventoryItem({
       id: 'impossible_silver_key',
@@ -1764,12 +1786,22 @@ class NoctariaGame {
           ${chapters.map(ch => {
             const isUnlocked = scenes.includes(ch.scene);
             const isCurrent = this.state.currentScene === ch.scene;
+            const bgFn = SCENE_BACKGROUNDS[ch.scene];
+            const thumbUrl = bgFn ? bgFn() : '';
             return `
               <div class="map-card ${isUnlocked ? '' : 'locked'} ${isCurrent ? 'current' : ''}" data-scene="${ch.scene}" data-chapter="${ch.id}">
-                <div class="map-card-phase">${ch.title.split('—')[0]}</div>
-                <div class="map-card-name">${ch.locationName}</div>
-                <div style="font-size:0.75rem; color:${isCurrent ? '#4ef0c4' : (isUnlocked ? 'var(--color-text-dim)' : '#ff6b6b')};">
-                  ${isCurrent ? '● Localização Atual' : (isUnlocked ? '✦ Clique para Viajar' : '🔒 Bloqueado nesta fase')}
+                ${thumbUrl ? `
+                  <div class="map-card-thumb-wrapper">
+                    <img src="${thumbUrl}" alt="${ch.locationName}" class="map-card-thumb-img" />
+                    <div class="map-card-thumb-overlay"></div>
+                  </div>
+                ` : ''}
+                <div class="map-card-body">
+                  <div class="map-card-phase">${ch.title.split('—')[0]}</div>
+                  <div class="map-card-name">${ch.locationName}</div>
+                  <div style="font-size:0.75rem; color:${isCurrent ? '#4ef0c4' : (isUnlocked ? 'var(--color-text-dim)' : '#ff6b6b')};">
+                    ${isCurrent ? '● Localização Atual' : (isUnlocked ? '✦ Clique para Viajar' : '🔒 Bloqueado nesta fase')}
+                  </div>
                 </div>
               </div>
             `;
@@ -2118,14 +2150,22 @@ class NoctariaGame {
     });
   }
 
-  openInspectModal(title, text, subtext = '') {
+  openInspectModal(title, text, subtext = '', illustration = null) {
     const html = `
-      <div class="letter-parchment">
-        <p style="margin-bottom:14px; white-space:pre-line;">${text}</p>
-        ${subtext ? `<p style="font-size:0.9rem; color:var(--color-aged-silver); border-top:1px dashed rgba(183,183,200,0.3); padding-top:10px;">${subtext}</p>` : ''}
-      </div>
-      <div style="margin-top:20px; text-align:right;">
-        <button class="btn-gothic" id="inspect-back-btn" style="display:inline-flex;">Fechar</button>
+      <div class="inspect-modal-content">
+        ${illustration ? `
+          <div class="inspect-illustration-wrapper">
+            <img src="${illustration}" alt="${title}" class="inspect-illustration-img" />
+            <div class="inspect-illustration-overlay"></div>
+          </div>
+        ` : ''}
+        <div class="letter-parchment">
+          <p style="margin-bottom:14px; white-space:pre-line;">${text}</p>
+          ${subtext ? `<p style="font-size:0.9rem; color:var(--color-aged-silver); border-top:1px dashed rgba(183,183,200,0.3); padding-top:10px;">${subtext}</p>` : ''}
+        </div>
+        <div style="margin-top:20px; text-align:right;">
+          <button class="btn-gothic btn-primary" id="inspect-back-btn" style="display:inline-flex;">Fechar</button>
+        </div>
       </div>
     `;
     this.openModal(title, html);
@@ -2143,9 +2183,18 @@ class NoctariaGame {
           ${summary}
         </p>
         ${nextCfg ? `
-          <div style="background:rgba(8,12,29,0.7); border:1px solid var(--color-arcane-purple); padding:14px; border-radius:4px; max-width:480px; margin:0 auto 24px auto;">
-            <span style="color:var(--color-aged-silver); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.1em;">PRÓXIMA ETAPA DESBLOQUEADA</span>
-            <p style="color:#fff; font-family:var(--font-title); font-size:1.15rem; margin-top:4px;">${nextCfg.title}</p>
+          <div style="background:rgba(8,12,29,0.7); border:1px solid var(--color-arcane-purple); border-radius:6px; max-width:540px; margin:0 auto 24px auto; overflow:hidden;">
+            ${SCENE_BACKGROUNDS[nextCfg.scene] ? `
+              <div style="width:100%; height:160px; overflow:hidden; position:relative;">
+                <img src="${SCENE_BACKGROUNDS[nextCfg.scene]()}" alt="${nextCfg.title}" style="width:100%; height:100%; object-fit:cover;" />
+                <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(8,12,29,0.95) 100%);"></div>
+              </div>
+            ` : ''}
+            <div style="padding:14px 18px; text-align:left;">
+              <span style="color:var(--color-luminous-purple); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.15em; font-family:var(--font-title);">PRÓXIMO CAPÍTULO DESBLOQUEADO</span>
+              <p style="color:#fff; font-family:var(--font-title); font-size:1.15rem; margin-top:4px;">${nextCfg.title}</p>
+              <p style="color:var(--color-text-dim); font-size:0.9rem; margin-top:4px;">${nextCfg.description}</p>
+            </div>
           </div>
         ` : ''}
         <button class="btn-gothic btn-primary" id="quest-congrats-btn" style="margin:0 auto; display:inline-flex;">
