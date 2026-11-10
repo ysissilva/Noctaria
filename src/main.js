@@ -915,11 +915,17 @@ class NoctariaGame {
           </div>
           <div class="corridor-ctrl-row">
             <span class="corridor-key">E</span>
-            <span>Interagir com Portas do Corredor</span>
+            <span>Interagir com Portas</span>
+            <span class="corridor-key" style="margin-left: 8px;">V</span>
+            <span>1ª / 3ª Pessoa</span>
+          </div>
+          <div class="corridor-ctrl-row">
+            <span class="corridor-key">Scroll</span>
+            <span>Zoom Câmera / 1ª Pessoa</span>
           </div>
           <div class="corridor-ctrl-row">
             <span class="corridor-key">Mouse</span>
-            <span>Mover Câmera (Clique na tela para travar)</span>
+            <span>Girar Câmera (Clique na tela para travar)</span>
           </div>
         </div>
 

@@ -32,26 +32,28 @@ export class Corridor3DScene {
       position: new THREE.Vector3(0, 0, 18),
       velocity: new THREE.Vector3(),
       rotationY: Math.PI, // Olhando para o fundo do corredor
-      speed: 4.8,
-      runMultiplier: 1.8,
+      speed: 6.8, // Velocidade aumentada ao andar (antes 4.8)
+      runMultiplier: 1.75, // Corrida ágil e fluida
       isRunning: false,
       // Sistema de Pulo e Gravidade
       isGrounded: true,
       jumpVelocityY: 0,
-      jumpStrength: 6.2,
+      jumpStrength: 6.8,
       gravity: -18.0
     };
 
-    // Controle de Câmera com Mouse (Terceira pessoa estilo RPG / TPS)
+    // Controle de Câmera com Mouse (Terceira pessoa e Primeira pessoa)
     this.cameraAngles = {
       yaw: Math.PI,           // Rotação horizontal ao redor do jogador
-      pitch: 0.28,           // Rotação vertical (altura do olhar)
-      distance: 4.8,          // Distância da câmera
+      pitch: 0.15,           // Rotação vertical (altura do olhar)
+      distance: 3.6,          // Distância inicial da câmera
       targetYaw: Math.PI,
-      targetPitch: 0.28,
+      targetPitch: 0.15,
+      targetDistance: 3.6,
       sensitivity: 0.0024,
       isPointerLocked: false,
-      isMouseDown: false
+      isMouseDown: false,
+      isFirstPerson: false    // Modo primeira pessoa
     };
 
     // Controles de teclado
@@ -78,14 +80,14 @@ export class Corridor3DScene {
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
 
-    // 1. Cena com névoa e atmosfera gótica
+    // 1. Cena com iluminação e atmosfera gótica clara
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x050711);
-    this.scene.fog = new THREE.FogExp2(0x080c1d, 0.035);
+    this.scene.background = new THREE.Color(0x0e1424);
+    this.scene.fog = new THREE.FogExp2(0x131a30, 0.012);
 
-    // 2. Câmera terceira pessoa
-    this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
-    this.camera.position.set(0, 3.2, 23);
+    // 2. Câmera
+    this.camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 120);
+    this.camera.position.set(0, 2.5, 22);
 
     // 3. Renderer WebGL
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -116,28 +118,39 @@ export class Corridor3DScene {
   }
 
   setupLighting() {
-    // 1. Luz ambiente reforçada para perfeita visibilidade do cenário e dos livros
-    const ambientLight = new THREE.AmbientLight(0x283858, 2.4);
+    // 1. Luz ambiente reforçada para perfeita visibilidade do corredor, portas e estantes
+    const ambientLight = new THREE.AmbientLight(0x4a6596, 4.2);
     this.scene.add(ambientLight);
 
     // 2. Luz de névoa e luar etéreo azul-turquesa ao centro do teto/abóbada
-    const moonLight = new THREE.DirectionalLight(0x5ca5f0, 2.2);
-    moonLight.position.set(0, 16, 5);
+    const moonLight = new THREE.DirectionalLight(0x8ec5ff, 3.8);
+    moonLight.position.set(0, 18, 5);
     moonLight.castShadow = true;
     moonLight.shadow.mapSize.width = 1024;
     moonLight.shadow.mapSize.height = 1024;
     this.scene.add(moonLight);
 
-    // 3. Focos de luz mística azulada no piso e ar (como o nevoeiro luminoso da imagem)
-    const mistPoint1 = new THREE.PointLight(0x3aa7f5, 4.5, 22, 1.8);
-    mistPoint1.position.set(0, 3.2, -6);
+    // Luz de preenchimento direcionada para o fundo do corredor
+    const forwardFill = new THREE.DirectionalLight(0xddeeff, 2.0);
+    forwardFill.position.set(0, 6, 25);
+    forwardFill.target.position.set(0, 2, -35);
+    this.scene.add(forwardFill);
+    this.scene.add(forwardFill.target);
+
+    // 3. Focos de luz mística azulada e turquesa ao longo do corredor
+    const mistPoint1 = new THREE.PointLight(0x5cb8ff, 6.0, 28, 1.4);
+    mistPoint1.position.set(0, 4.2, 10);
     this.scene.add(mistPoint1);
 
-    const mistPoint2 = new THREE.PointLight(0x4dc5ff, 4.0, 18, 1.8);
-    mistPoint2.position.set(0, 2.8, -20);
+    const mistPoint2 = new THREE.PointLight(0x5cb8ff, 6.0, 28, 1.4);
+    mistPoint2.position.set(0, 4.2, -6);
     this.scene.add(mistPoint2);
 
-    // 4. Arandelas e candelabros com velas/chamas douradas quentes fixadas nas pilastras
+    const mistPoint3 = new THREE.PointLight(0x6ed4ff, 5.5, 26, 1.4);
+    mistPoint3.position.set(0, 4.2, -22);
+    this.scene.add(mistPoint3);
+
+    // 4. Arandelas e candelabros com tochas quentes douradas fixadas nas pilastras
     const sconcePositions = [
       { x: -3.85, z: 18, side: 'left' },  { x: 3.85, z: 18, side: 'right' },
       { x: -3.85, z: 6, side: 'left' },   { x: 3.85, z: 6, side: 'right' },
@@ -149,14 +162,14 @@ export class Corridor3DScene {
     this.torches = [];
     const candleGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.28, 8);
     const candleMat = new THREE.MeshStandardMaterial({ color: 0xf5eedb, roughness: 0.4 });
-    const metalMat = new THREE.MeshStandardMaterial({ color: 0x1f1710, metalness: 0.85, roughness: 0.3 });
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffbb44 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x2d2420, metalness: 0.85, roughness: 0.3 });
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffd266 });
 
     sconcePositions.forEach((pos, idx) => {
-      // Luz pontual dourada quente
-      const light = new THREE.PointLight(0xffb544, 3.6, 9.5, 1.9);
+      // Luz pontual dourada quente ampliada e mais brilhante
+      const light = new THREE.PointLight(0xffbe4e, 5.5, 14, 1.5);
       const posX = pos.side === 'left' ? pos.x + 0.35 : pos.x - 0.35;
-      light.position.set(posX, 2.8, pos.z);
+      light.position.set(posX, 2.9, pos.z);
       this.scene.add(light);
 
       // Suporte de ferro forjado trabalhado
@@ -403,25 +416,24 @@ export class Corridor3DScene {
     rightWall.receiveShadow = true;
     this.scene.add(rightWall);
 
-    // 5. Teto com Arcos Góticos Abobadados com Nervuras Cruzadas
-    const ceilingGeo = new THREE.CylinderGeometry(corridorWidth / 2, corridorWidth / 2, corridorLength, 20, 1, false, Math.PI, Math.PI);
+    // 5. Teto Plano Alto com Vigas Góticas Decorativas (sem cilindro obstrutivo)
+    const ceilingGeo = new THREE.PlaneGeometry(corridorWidth, corridorLength);
     const ceilingMat = new THREE.MeshStandardMaterial({
-      color: 0x181f30,
-      side: THREE.BackSide,
-      roughness: 0.85
+      color: 0x1f2638,
+      roughness: 0.8
     });
     const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
-    ceiling.position.set(0, corridorHeight - 0.8, -5);
+    ceiling.position.set(0, corridorHeight, -5);
     ceiling.rotation.x = Math.PI / 2;
     this.scene.add(ceiling);
 
-    // Nervuras dos arcos transversais ao longo do teto gótico
-    const ribMat = new THREE.MeshStandardMaterial({ color: 0x101524, roughness: 0.7 });
+    // Vigas arquitetônicas elegantes no topo das paredes (mantendo a visão 100% desobstruída)
+    const ribMat = new THREE.MeshStandardMaterial({ color: 0x121828, roughness: 0.7 });
+    const beamGeo = new THREE.BoxGeometry(corridorWidth, 0.2, 0.35);
     for (let z = 22; z >= -32; z -= 6) {
-      const archRibGeo = new THREE.TorusGeometry(corridorWidth / 2 - 0.05, 0.14, 8, 24, Math.PI);
-      const archRib = new THREE.Mesh(archRibGeo, ribMat);
-      archRib.position.set(0, corridorHeight - 0.8, z);
-      this.scene.add(archRib);
+      const beam = new THREE.Mesh(beamGeo, ribMat);
+      beam.position.set(0, corridorHeight - 0.1, z);
+      this.scene.add(beam);
     }
 
     // 6. Pilastras Góticas de Pedra Entalhada e Pedestais
@@ -441,16 +453,16 @@ export class Corridor3DScene {
       this.scene.add(pRight);
     }
 
-    // 7. Névoa mística azulada etérea no centro (efeito vaporoso idêntico à foto)
-    const mistGeo = new THREE.CylinderGeometry(1.6, 2.2, 5.0, 16, 1, true);
+    // 7. Névoa mística azulada etérea suave no chão do corredor
+    const mistGeo = new THREE.CylinderGeometry(2.0, 3.2, 1.2, 16, 1, true);
     const mistMat = new THREE.MeshBasicMaterial({
-      color: 0x3da3f2,
+      color: 0x5cb8ff,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.15,
       side: THREE.DoubleSide
     });
     const mistColumn = new THREE.Mesh(mistGeo, mistMat);
-    mistColumn.position.set(0, 3.2, -14);
+    mistColumn.position.set(0, 0.6, -14);
     this.scene.add(mistColumn);
 
     // 8. CRIAÇÃO DAS 3 PORTAS AMADEIRADAS GÓTICAS
@@ -770,19 +782,20 @@ export class Corridor3DScene {
     });
 
     // Paleta de roupas nobres e tom de pele de Elias Crowe
-    const colSkin = new THREE.Color(0xf2cfb2);       // Tom de pele humano claro e visível
-    const colFaceShadow = new THREE.Color(0xd9b396); // Sombreamento facial
-    const colEyes = new THREE.Color(0x111622);       // Olhar escuro e sobrancelhas marcadas
-    const colLips = new THREE.Color(0xc98f82);       // Lábios naturais
-    const colCoat = new THREE.Color(0x1c253d);       // Sobrecasaca azul-noite escura nobre
-    const colVest = new THREE.Color(0x28334f);       // Colete gótico bordado
-    const colSilver = new THREE.Color(0xdfe7f2);     // Bordados e ornamentos de prata
-    const colPants = new THREE.Color(0x181a24);      // Calça escura de alfaiataria
-    const colBoots = new THREE.Color(0x121013);      // Botas pretas de montaria
-    const colGlove = new THREE.Color(0x242022);      // Luvas de couro
-    const colShirt = new THREE.Color(0x3a3845);      // Lenço/jabot vitoriano no pescoço
+    const colSkin = new THREE.Color(0xf5d3b3);       // Tom de pele humano claro e natural
+    const colNeck = new THREE.Color(0xe0bfa2);       // Sombra de pescoço
+    const colFaceShadow = new THREE.Color(0xd2aa89); // Contorno do maxilar
+    const colEyes = new THREE.Color(0x0a0c12);       // Olhos escuros profundos e sobrancelhas
+    const colLips = new THREE.Color(0xbf7b70);       // Lábios naturais masculinos
+    const colCoat = new THREE.Color(0x131828);       // Sobrecasaca preta/azul meia-noite
+    const colVest = new THREE.Color(0x1b2438);       // Colete gótico
+    const colSilver = new THREE.Color(0xccd5e8);     // Bordados de prata
+    const colPants = new THREE.Color(0x11131a);      // Calça escura
+    const colBoots = new THREE.Color(0x0c0b0e);      // Botas pretas
+    const colGlove = new THREE.Color(0x1a1618);      // Luvas de couro
+    const colShirt = new THREE.Color(0x282634);      // Lenço/jabot vitoriano
 
-    // 1. REVESTIR AS JUNTAS/DOBRADIÇAS PARA PARECEREM TECIDO E CORPO HUMANO (Em vez de ocultá-las, o que criava buracos no modelo)
+    // 1. REVESTIR AS JUNTAS/DOBRADIÇAS PARA PARECEREM TECIDO E CORPO HUMANO
     if (jointsMesh && jointsMesh.geometry) {
       jointsMesh.visible = true;
       const jGeo = jointsMesh.geometry;
@@ -834,11 +847,11 @@ export class Corridor3DScene {
       }
 
       jGeo.setAttribute('color', new THREE.BufferAttribute(jColors, 3));
-      jointsMesh.material = new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.7,
-        metalness: 0.1
-      });
+      // Reutiliza e atualiza o material existente para manter o skinning do SkinnedMesh
+      if (jointsMesh.material) {
+        jointsMesh.material.vertexColors = true;
+        jointsMesh.material.needsUpdate = true;
+      }
     }
 
     // 2. VESTIMENTA E ANATOMIA HUMANA NA SUPERFÍCIE (Beta_Surface)
@@ -870,19 +883,30 @@ export class Corridor3DScene {
         // --- Atribuição de cores das roupas de Elias Crowe ---
         let c = colCoat;
 
-        // Cabeça e Face de Elias Crowe
-        if (domJoint === 5 || (y > 1.48 && Math.abs(x) < 0.12 && z > -0.1)) {
-          // Olhar penetrante / Sobrancelhas de Elias
-          if (z > 0.095 && y >= 1.635 && y <= 1.685 && Math.abs(x) >= 0.018 && Math.abs(x) <= 0.058) {
-            c = colEyes;
+        // Cabeça e Face de Elias Crowe (joint 5)
+        if (domJoint === 5 || y >= 1.52) {
+          // Rosto frontal (z > 0.05)
+          if (z > 0.05) {
+            // Olhos marcantes e sobrancelhas
+            if (y >= 1.635 && y <= 1.685 && Math.abs(x) >= 0.015 && Math.abs(x) <= 0.065) {
+              c = colEyes;
+            }
+            // Lábios naturais
+            else if (y >= 1.555 && y <= 1.585 && Math.abs(x) <= 0.028) {
+              c = colLips;
+            }
+            // Sombra da linha da mandíbula
+            else if (y <= 1.56 && Math.abs(x) >= 0.04) {
+              c = colFaceShadow;
+            }
+            // Pele do rosto
+            else {
+              c = colSkin;
+            }
           }
-          // Lábios naturais masculinos
-          else if (z > 0.11 && y >= 1.585 && y <= 1.615 && Math.abs(x) <= 0.025) {
-            c = colLips;
-          }
-          // Sombra da mandíbula / contorno facial
-          else if (z > 0.05 && y >= 1.54 && y <= 1.62 && Math.abs(x) >= 0.055) {
-            c = colFaceShadow;
+          // Lateral e parte de trás da cabeça (cabelo ou pele de base)
+          else if (z < 0.0) {
+            c = new THREE.Color(0x0a0c10); // Cabelo preto de base
           } else {
             c = colSkin;
           }
@@ -929,111 +953,104 @@ export class Corridor3DScene {
       }
 
       geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      surfaceMesh.material = new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.65,
-        metalness: 0.15
-      });
+      // Reutiliza e atualiza o material existente para manter o skinning funcionando
+      if (surfaceMesh.material) {
+        surfaceMesh.material.vertexColors = true;
+        surfaceMesh.material.needsUpdate = true;
+      }
     }
 
-    // 3. CABELO PRETO ONDULADO/REBELDE DE ELIAS CROWE
-    // Como os ossos da armadura têm escala 0.01, anexamos os cabelos e ornamentos diretamente ao grupo do modelo
-    // e atualizamos suas posições na renderização para seguir suavemente o personagem
-    this.eliasAttachments = {
-      hairGroup: null,
-      coatGroup: null,
-      headBone: headBone,
-      spine2Bone: spine2Bone
-    };
+    // 3. CABELO PRETO ONDULADO/REBELDE DE ELIAS CROWE, GOLA ALTA E ORNAMENTOS
+    // Como os ossos (bones) da Armature estão em escala 0.01 e o modelo está em escala 1.4,
+    // anexar diretamente ao osso Head faz o cabelo herdar toda a rotação e movimento com precisão de escala (100x dentro do osso)
+    if (headBone) {
+      const hairGroup = new THREE.Group();
+      hairGroup.name = 'Elias_Hair';
 
-    const hairGroup = new THREE.Group();
-    hairGroup.name = 'Elias_Hair';
+      const hairMat = new THREE.MeshStandardMaterial({
+        color: 0x08090e,
+        roughness: 0.6,
+        metalness: 0.15
+      });
 
-    const hairMat = new THREE.MeshStandardMaterial({
-      color: 0x07080c,
-      roughness: 0.5,
-      metalness: 0.2
-    });
+      // Volume do topo da cabeça e nuca (em coordenadas locais do Head bone)
+      const hairBaseGeo = new THREE.SphereGeometry(12.5, 16, 16);
+      hairBaseGeo.scale(0.95, 1.15, 1.25);
+      const hairBase = new THREE.Mesh(hairBaseGeo, hairMat);
+      hairBase.position.set(0, 5.0, -1.8);
+      hairGroup.add(hairBase);
 
-    // Volume do cabelo cobrindo a nuca e topo da cabeça
-    const hairBaseGeo = new THREE.SphereGeometry(0.12, 16, 16);
-    hairBaseGeo.scale(0.96, 1.12, 1.15);
-    const hairBase = new THREE.Mesh(hairBaseGeo, hairMat);
-    hairBase.position.set(0, 0.05, -0.015);
-    hairGroup.add(hairBase);
+      // Mechas e franja ondulada de Elias Crowe caindo pela testa e laterais
+      const bangsGeo = new THREE.ConeGeometry(2.6, 9.8, 6);
+      bangsGeo.rotateX(-Math.PI / 3);
 
-    // Mechas frontais rebeldes onduladas na testa e laterais
-    const bangsGeo = new THREE.ConeGeometry(0.028, 0.095, 6);
-    bangsGeo.rotateX(-Math.PI / 3);
+      const bangPositions = [
+        { x: -4.5, y: 7.5, z: 7.8, rx: 0.4, ry: -0.3, rz: -0.35, s: 1.1 },
+        { x: -1.5, y: 8.2, z: 8.8, rx: 0.5, ry: -0.1, rz: -0.1, s: 1.2 },
+        { x: 2.0, y: 8.0, z: 8.5, rx: 0.48, ry: 0.2, rz: 0.15, s: 1.15 },
+        { x: 5.0, y: 7.2, z: 7.5, rx: 0.35, ry: 0.4, rz: 0.45, s: 1.0 },
+        { x: -8.0, y: 2.0, z: 4.0, rx: 0.2, ry: -0.5, rz: -0.25, s: 1.25 },
+        { x: 8.0, y: 2.0, z: 4.0, rx: 0.2, ry: 0.5, rz: 0.25, s: 1.25 },
+        { x: -7.5, y: -4.0, z: 1.5, rx: 0.1, ry: -0.4, rz: -0.1, s: 1.3 },
+        { x: 7.5, y: -4.0, z: 1.5, rx: 0.1, ry: 0.4, rz: 0.1, s: 1.3 },
+        { x: 0, y: -1.0, z: -8.5, rx: -0.4, ry: 0, rz: 0, s: 1.35 }
+      ];
 
-    const bangPositions = [
-      { x: -0.045, y: 0.08, z: 0.08, rx: 0.4, ry: -0.3, rz: -0.35, s: 1.1 },
-      { x: -0.015, y: 0.085, z: 0.088, rx: 0.5, ry: -0.1, rz: -0.1, s: 1.2 },
-      { x: 0.02, y: 0.083, z: 0.086, rx: 0.48, ry: 0.2, rz: 0.15, s: 1.15 },
-      { x: 0.05, y: 0.075, z: 0.075, rx: 0.35, ry: 0.4, rz: 0.45, s: 1.0 },
-      { x: -0.082, y: 0.02, z: 0.04, rx: 0.2, ry: -0.5, rz: -0.25, s: 1.25 },
-      { x: 0.082, y: 0.02, z: 0.04, rx: 0.2, ry: 0.5, rz: 0.25, s: 1.25 },
-      { x: 0, y: -0.01, z: -0.085, rx: -0.4, ry: 0, rz: 0, s: 1.35 }
-    ];
+      bangPositions.forEach((bp) => {
+        const bang = new THREE.Mesh(bangsGeo, hairMat);
+        bang.position.set(bp.x, bp.y, bp.z);
+        bang.rotation.set(bp.rx, bp.ry, bp.rz);
+        bang.scale.set(bp.s, bp.s, bp.s);
+        hairGroup.add(bang);
+      });
 
-    bangPositions.forEach((bp) => {
-      const bang = new THREE.Mesh(bangsGeo, hairMat);
-      bang.position.set(bp.x, bp.y, bp.z);
-      bang.rotation.set(bp.rx, bp.ry, bp.rz);
-      bang.scale.set(bp.s, bp.s, bp.s);
-      hairGroup.add(bang);
-    });
+      headBone.add(hairGroup);
+    }
 
-    this.scene.add(hairGroup);
-    this.eliasAttachments.hairGroup = hairGroup;
+    // 4. COLARINHO ALTO VITORIANO E PINGENTE DA LUA CRESCENTE (anexado ao Spine2 ou Neck)
+    const torsoBone = spine2Bone || neckBone;
+    if (torsoBone) {
+      const coatGroup = new THREE.Group();
+      coatGroup.name = 'Elias_CoatDetails';
 
-    // 4. COLARINHO ALTO VITORIANO E PINGENTE DA LUA CRESCENTE
-    const coatGroup = new THREE.Group();
-    coatGroup.name = 'Elias_CoatDetails';
+      const collarMat = new THREE.MeshStandardMaterial({
+        color: 0x0e1322,
+        roughness: 0.6,
+        metalness: 0.2
+      });
+      const collarGeo = new THREE.CylinderGeometry(11.5, 13.5, 12, 14, 1, true, -Math.PI * 0.75, Math.PI * 1.5);
+      const collarMesh = new THREE.Mesh(collarGeo, collarMat);
+      collarMesh.position.set(0, 10.0, 0.5);
+      collarMesh.rotation.x = 0.15;
+      coatGroup.add(collarMesh);
 
-    const collarMat = new THREE.MeshStandardMaterial({
-      color: 0x0f1424,
-      roughness: 0.6,
-      metalness: 0.2
-    });
-    const collarGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.11, 14, 1, true, -Math.PI * 0.75, Math.PI * 1.5);
-    const collarMesh = new THREE.Mesh(collarGeo, collarMat);
-    collarMesh.position.set(0, 0.03, -0.01);
-    collarMesh.rotation.x = 0.1;
-    coatGroup.add(collarMesh);
+      // Pingente da Lua Crescente com corrente de prata
+      const chainMat = new THREE.MeshStandardMaterial({
+        color: 0xebf2ff,
+        metalness: 0.9,
+        roughness: 0.2
+      });
+      const crescentGeo = new THREE.TorusGeometry(2.0, 0.45, 8, 16, Math.PI * 1.3);
+      const crescent = new THREE.Mesh(crescentGeo, chainMat);
+      crescent.position.set(0, 4.0, 9.5);
+      crescent.rotation.z = Math.PI * 0.35;
+      coatGroup.add(crescent);
 
-    // Pingente da Lua Crescente
-    const chainMat = new THREE.MeshStandardMaterial({
-      color: 0xddeeff,
-      metalness: 0.9,
-      roughness: 0.2
-    });
-    const crescentGeo = new THREE.TorusGeometry(0.018, 0.004, 8, 16, Math.PI * 1.3);
-    const crescent = new THREE.Mesh(crescentGeo, chainMat);
-    crescent.position.set(0, -0.04, 0.10);
-    crescent.rotation.z = Math.PI * 0.35;
-    coatGroup.add(crescent);
-
-    this.scene.add(coatGroup);
-    this.eliasAttachments.coatGroup = coatGroup;
+      torsoBone.add(coatGroup);
+    }
   }
 
-  // Modifica os canais das animações para retirar o balanço feminino de quadris e conferir um andar masculino firme
+  // Modifica os canais das animações para retirar a pose e balanço feminino (inclusive no idle) e conferir postura masculina firme
   adjustAnimationForMasculineWalk(clip) {
-    if (clip.name !== 'walk' && clip.name !== 'run') return clip;
-
     const modifiedTracks = clip.tracks.map((track) => {
-      // 1. Reduzir a oscilação lateral da bacia/quadril (hip sway feminino em mixamorig:Hips)
+      // 1. Corrigir rotação dos quadris (Hips) em idle, walk e run
       if (track.name === 'mixamorig:Hips.rotation') {
         const values = track.values.slice();
-        // values são quatérnios [x, y, z, w]
         for (let i = 0; i < values.length; i += 4) {
-          // Reduz a rotação no eixo Z (inclinação lateral feminina da pelve) em 75%
-          values[i + 2] *= 0.25;
-          // Reduz o rebolado / torção no eixo Y em 65%
-          values[i + 1] *= 0.35;
+          // Zera ou reduz drasticamente a inclinação lateral e torção feminina da cintura
+          values[i + 2] *= 0.15;
+          values[i + 1] *= 0.25;
 
-          // Renormalizar quatérnio
           const len = Math.hypot(values[i], values[i + 1], values[i + 2], values[i + 3]);
           if (len > 0.0001) {
             values[i] /= len;
@@ -1045,10 +1062,9 @@ export class Corridor3DScene {
         return new THREE.QuaternionKeyframeTrack(track.name, track.times, values);
       }
 
-      // 2. Reduzir o deslocamento lateral brusco dos quadris no eixo X
+      // 2. Corrigir translação lateral dos quadris
       if (track.name === 'mixamorig:Hips.translation') {
         const values = track.values.slice();
-        // values são [x, y, z]
         let avgX = 0;
         for (let i = 0; i < values.length; i += 3) {
           avgX += values[i];
@@ -1056,18 +1072,16 @@ export class Corridor3DScene {
         avgX /= (values.length / 3);
 
         for (let i = 0; i < values.length; i += 3) {
-          // Amortece o desvio lateral
-          values[i] = avgX + (values[i] - avgX) * 0.3;
+          values[i] = avgX + (values[i] - avgX) * 0.2;
         }
         return new THREE.VectorKeyframeTrack(track.name, track.times, values);
       }
 
-      // 3. Ajustar balanço dos braços e pernas para postura mais aberta e ereta
+      // 3. Afastar e alinhar braços para postura mais imponente
       if (track.name === 'mixamorig:LeftArm.rotation' || track.name === 'mixamorig:RightArm.rotation') {
         const values = track.values.slice();
         for (let i = 0; i < values.length; i += 4) {
-          // Reduz movimento fletido para dentro, deixando postura mais firme
-          values[i + 1] *= 0.7;
+          values[i + 1] *= 0.6;
           const len = Math.hypot(values[i], values[i + 1], values[i + 2], values[i + 3]);
           if (len > 0.0001) {
             values[i] /= len;
@@ -1096,6 +1110,10 @@ export class Corridor3DScene {
       }
       if (key === 'e') {
         this.interactWithCurrentDoor();
+      }
+      if (key === 'v') {
+        // Alternar entre Primeira e Terceira pessoa
+        this.togglePerspective();
       }
       if (e.code === 'Space' || e.key === ' ') {
         this.keys.space = true;
@@ -1163,10 +1181,14 @@ export class Corridor3DScene {
       }
     };
 
-    // Zoom da câmera com a rodinha do mouse
+    // Zoom da câmera com a rodinha do mouse (scroll para frente aproxima até primeira pessoa!)
     this.onWheel = (e) => {
-      this.cameraAngles.distance += e.deltaY * 0.003;
-      this.cameraAngles.distance = Math.max(2.5, Math.min(8.0, this.cameraAngles.distance));
+      this.cameraAngles.targetDistance += e.deltaY * 0.0035;
+      // Distância vai de 0.0 (Primeira Pessoa) até 7.5 (Visão ampla distante)
+      this.cameraAngles.targetDistance = Math.max(0.0, Math.min(7.5, this.cameraAngles.targetDistance));
+
+      // Se a distância for menor que 0.45, entra automaticamente em Primeira Pessoa
+      this.cameraAngles.isFirstPerson = this.cameraAngles.targetDistance < 0.45;
       e.preventDefault();
     };
 
@@ -1188,6 +1210,16 @@ export class Corridor3DScene {
     window.addEventListener('mouseup', this.onMouseUp);
     window.addEventListener('mousemove', this.onMouseMove);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
+  }
+
+  // Alterna manualmente o modo de perspectiva com a tecla V
+  togglePerspective() {
+    this.cameraAngles.isFirstPerson = !this.cameraAngles.isFirstPerson;
+    if (this.cameraAngles.isFirstPerson) {
+      this.cameraAngles.targetDistance = 0.0;
+    } else {
+      this.cameraAngles.targetDistance = 3.6;
+    }
   }
 
   // Executa o pulo com impulso vertical e som/física
@@ -1359,30 +1391,65 @@ export class Corridor3DScene {
     this.model.position.copy(this.player.position);
     this.model.rotation.y = this.player.rotationY;
 
-    // 5. Câmera Orbital em Terceira Pessoa controlada pelo Mouse ao redor de Elias Crowe
-    const lookTargetY = this.player.position.y + 1.65;
-    const dist = this.cameraAngles.distance;
-    const yaw = this.cameraAngles.yaw;
-    const pitch = this.cameraAngles.pitch;
+    // Suavizar distância da câmera (para zoom suave)
+    this.cameraAngles.distance += (this.cameraAngles.targetDistance - this.cameraAngles.distance) * 10.0 * delta;
 
-    // Posição esférica da câmera
-    const camOffsetX = Math.sin(yaw) * Math.cos(pitch) * dist;
-    const camOffsetY = Math.sin(pitch) * dist + 1.2;
-    const camOffsetZ = Math.cos(yaw) * Math.cos(pitch) * dist;
+    // Ocultar modelo do personagem no modo de primeira pessoa para não obstruir a visão
+    const isFirstPerson = this.cameraAngles.isFirstPerson || this.cameraAngles.distance < 0.35;
+    this.model.visible = !isFirstPerson;
 
-    const targetCamX = this.player.position.x - camOffsetX;
-    const targetCamY = this.player.position.y + camOffsetY;
-    const targetCamZ = this.player.position.z - camOffsetZ;
+    // 5. Câmera: Primeira Pessoa vs Terceira Pessoa Orbital
+    if (isFirstPerson) {
+      // Olhos do personagem: altura 1.62m
+      const eyeHeight = 1.62;
+      this.camera.position.set(
+        this.player.position.x,
+        this.player.position.y + eyeHeight,
+        this.player.position.z
+      );
 
-    this.camera.position.x += (targetCamX - this.camera.position.x) * 12.0 * delta;
-    this.camera.position.y += (targetCamY - this.camera.position.y) * 12.0 * delta;
-    this.camera.position.z += (targetCamZ - this.camera.position.z) * 12.0 * delta;
+      // Direção do olhar baseada no yaw e pitch do mouse
+      const yaw = this.cameraAngles.yaw;
+      const pitch = this.cameraAngles.pitch;
+      const lookDist = 10.0;
+      const lookAtTarget = new THREE.Vector3(
+        this.camera.position.x - Math.sin(yaw) * Math.cos(pitch) * lookDist,
+        this.camera.position.y - Math.sin(pitch) * lookDist,
+        this.camera.position.z - Math.cos(yaw) * Math.cos(pitch) * lookDist
+      );
 
-    this.camera.lookAt(
-      this.player.position.x,
-      lookTargetY,
-      this.player.position.z
-    );
+      this.camera.lookAt(lookAtTarget);
+
+      // No modo primeira pessoa, o personagem vira junto com o mouse ao se mover
+      if (isMoving) {
+        this.player.rotationY = this.cameraAngles.yaw;
+      }
+    } else {
+      // Terceira Pessoa Orbital fluida ao redor de Elias Crowe
+      const lookTargetY = this.player.position.y + 1.55;
+      const dist = Math.max(this.cameraAngles.distance, 0.4);
+      const yaw = this.cameraAngles.yaw;
+      const pitch = this.cameraAngles.pitch;
+
+      // Posição esférica da câmera
+      const camOffsetX = Math.sin(yaw) * Math.cos(pitch) * dist;
+      const camOffsetY = Math.sin(pitch) * dist + 0.85;
+      const camOffsetZ = Math.cos(yaw) * Math.cos(pitch) * dist;
+
+      const targetCamX = this.player.position.x - camOffsetX;
+      const targetCamY = this.player.position.y + camOffsetY;
+      const targetCamZ = this.player.position.z - camOffsetZ;
+
+      this.camera.position.x += (targetCamX - this.camera.position.x) * 14.0 * delta;
+      this.camera.position.y += (targetCamY - this.camera.position.y) * 14.0 * delta;
+      this.camera.position.z += (targetCamZ - this.camera.position.z) * 14.0 * delta;
+
+      this.camera.lookAt(
+        this.player.position.x,
+        lookTargetY,
+        this.player.position.z
+      );
+    }
   }
 
   animate() {
@@ -1408,19 +1475,6 @@ export class Corridor3DScene {
 
     // Atualizar locomoção do jogador e física
     this.updatePlayer(delta);
-
-    // Atualizar acessórios de Elias Crowe (cabelos rebeldes, colarinho e corrente) para acompanhar a cabeça e coluna
-    if (this.eliasAttachments && this.model) {
-      const { hairGroup, coatGroup, headBone, spine2Bone } = this.eliasAttachments;
-      if (headBone && hairGroup) {
-        headBone.getWorldPosition(hairGroup.position);
-        headBone.getWorldQuaternion(hairGroup.quaternion);
-      }
-      if (spine2Bone && coatGroup) {
-        spine2Bone.getWorldPosition(coatGroup.position);
-        spine2Bone.getWorldQuaternion(coatGroup.quaternion);
-      }
-    }
 
     // Renderizar cena
     if (this.renderer && this.scene && this.camera) {
