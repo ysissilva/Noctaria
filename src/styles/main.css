@@ -49,6 +49,8 @@ body, html {
 
 /* Atmospheric floating particles */
 .ambient-fog {
+  display: none !important; /* Removido para garantir visibilidade total sem manchas */
+
   position: absolute;
   top: 0;
   left: 0;
@@ -605,7 +607,12 @@ body, html {
 .dialogue-text {
   font-family: var(--font-text);
   font-size: 1.12rem;
-  line-height: 1.7;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  word-spacing: 0.16em;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
   color: var(--color-lunar-white);
   min-height: 70px;
   margin-bottom: 20px;
@@ -1413,4 +1420,425 @@ body, html {
   font-size: 1rem;
   color: #fff;
   margin-bottom: 6px;
+}
+
+/* ==========================================================================
+   INTRODUÇÃO CINEMATOGRÁFICA (Abertura do Castelo)
+   ========================================================================== */
+.intro-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000000;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.intro-content {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 40px;
+}
+
+/* Letras do título NOCTÁRIA */
+.intro-title {
+  position: absolute;
+  left: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.15em;
+  font-family: var(--font-title);
+  font-size: clamp(3rem, 6.5vw, 5.8rem);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.intro-letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
+  background: linear-gradient(135deg, var(--color-luminous-purple) 0%, #d8ccf5 45%, var(--color-arcane-purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 16px rgba(165, 138, 232, 0.45));
+  transition: opacity 0.45s ease-out, transform 0.45s ease-out;
+}
+
+.intro-letter.revealed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Ícone do Castelo com animação de rolar e depois zoom */
+.intro-castle-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 140px;
+  height: 140px;
+  margin-top: -70px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, left;
+}
+
+.intro-castle-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: var(--color-luminous-purple);
+  filter: drop-shadow(0 0 16px rgba(165, 138, 232, 0.7)) drop-shadow(0 0 35px rgba(118, 80, 184, 0.45));
+  transform-origin: center center;
+}
+
+/* Transição de aproximação / zoom entrando no castelo */
+.intro-screen.zoom-in .intro-castle-wrapper {
+  transition: transform 1.7s cubic-bezier(0.7, 0, 0.3, 1), opacity 0.7s ease-in 1s;
+  transform: scale(32) !important;
+  opacity: 0;
+}
+
+.intro-screen.zoom-in .intro-title {
+  transition: opacity 0.7s ease-out, transform 1.2s ease-in;
+  opacity: 0;
+  transform: translateY(-50%) scale(1.15);
+}
+
+.intro-screen.fade-out {
+  transition: opacity 0.6s ease-out;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro-skip-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 28px;
+  background: transparent;
+  border: 1px solid rgba(165, 138, 232, 0.25);
+  color: var(--color-aged-silver);
+  font-family: var(--font-title);
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition: opacity 0.3s, border-color 0.3s, color 0.3s;
+  z-index: 100;
+}
+
+.intro-skip-btn:hover {
+  opacity: 1;
+  border-color: var(--color-luminous-purple);
+  color: var(--color-luminous-purple);
+}
+
+/* ==========================================================================
+   CORREDOR 3D INTERATIVO (Exploração com Personagem e Controles WASD)
+   ========================================================================== */
+.corridor-3d-screen {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 50;
+  background-color: #050711;
+  overflow: hidden;
+}
+
+#corridor-3d-canvas-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+
+.corridor-hud {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  z-index: 60;
+  pointer-events: none;
+  background: rgba(8, 12, 29, 0.75);
+  border: 1px solid rgba(165, 138, 232, 0.3);
+  border-radius: 8px;
+  padding: 14px 20px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.corridor-hud-title {
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  letter-spacing: 0.14em;
+  color: var(--color-luminous-purple);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.corridor-hud-desc {
+  font-family: var(--font-text);
+  font-size: 0.85rem;
+  color: var(--color-aged-silver);
+}
+
+/* Painel de Controles no Canto Inferior Esquerdo */
+.corridor-controls-guide {
+  position: absolute;
+  bottom: 24px;
+  left: 28px;
+  z-index: 60;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(8, 12, 29, 0.8);
+  border: 1px solid rgba(165, 138, 232, 0.25);
+  border-radius: 8px;
+  padding: 12px 18px;
+  backdrop-filter: blur(6px);
+}
+
+.corridor-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--color-lunar-white);
+}
+
+.corridor-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(36, 59, 112, 0.6);
+  border: 1px solid rgba(165, 138, 232, 0.5);
+  color: var(--color-luminous-purple);
+  font-weight: 700;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+/* Prompt de Interação ao Chegar ao Portal no Fim do Corredor */
+.corridor-interact-prompt {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.corridor-interact-prompt.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.btn-enter-gate {
+  font-family: var(--font-title);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, rgba(118, 80, 184, 0.85) 0%, rgba(36, 59, 112, 0.85) 100%);
+  border: 1px solid var(--color-luminous-purple);
+  color: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(165, 138, 232, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+}
+
+.btn-enter-gate:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 35px rgba(165, 138, 232, 0.8);
+  filter: brightness(1.2);
+}
+
+.corridor-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-luminous-purple);
+  font-family: var(--font-title);
+  letter-spacing: 0.2em;
+  font-size: 1.1rem;
+  text-shadow: 0 0 10px rgba(165, 138, 232, 0.6);
+  z-index: 55;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   CURSOR CUSTOMIZADO DE INVESTIGACAO
+   ========================================================================== */
+
+body {
+  cursor: none;
+}
+
+#custom-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%, -50%);
+}
+
+#custom-cursor .cursor-ring {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(165, 138, 232, 0.7);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.18s ease, height 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+#custom-cursor .cursor-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-luminous-purple);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px var(--color-luminous-purple);
+  transition: transform 0.12s ease, background 0.18s ease;
+}
+
+#custom-cursor .cursor-inspect-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(8px, -24px);
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px var(--color-luminous-purple));
+}
+
+body.cursor-inspect #custom-cursor .cursor-ring {
+  width: 52px;
+  height: 52px;
+  border-color: var(--color-luminous-purple);
+  box-shadow: 0 0 18px rgba(165, 138, 232, 0.6), inset 0 0 10px rgba(165, 138, 232, 0.1);
+}
+
+body.cursor-inspect #custom-cursor .cursor-dot {
+  transform: translate(-50%, -50%) scale(1.5);
+  background: #fff;
+}
+
+body.cursor-inspect #custom-cursor .cursor-inspect-icon {
+  opacity: 1;
+  transform: translate(10px, -28px);
+}
+
+body.cursor-talk #custom-cursor .cursor-ring {
+  width: 46px;
+  height: 46px;
+  border-color: #5376C8;
+  box-shadow: 0 0 14px rgba(83, 118, 200, 0.6);
+}
+
+body.cursor-talk #custom-cursor .cursor-dot {
+  background: #5376C8;
+  box-shadow: 0 0 8px #5376C8;
+}
+
+body.cursor-talk #custom-cursor .cursor-inspect-icon {
+  opacity: 1;
+  transform: translate(10px, -28px);
+}
+
+/* Indicador de tecla nas opcoes de dialogo */
+.dialogue-key-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: rgba(165, 138, 232, 0.2);
+  border: 1px solid rgba(165, 138, 232, 0.6);
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-luminous-purple);
+  margin-right: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.dialogue-opt-btn:hover .dialogue-key-hint,
+.dialogue-opt-btn.kbd-active .dialogue-key-hint {
+  background: rgba(165, 138, 232, 0.5);
+  border-color: var(--color-luminous-purple);
+  color: #fff;
+}
+
+.dialogue-opt-btn.kbd-active {
+  background: rgba(165, 138, 232, 0.15);
+  border-color: rgba(165, 138, 232, 0.8);
+  transform: translateX(4px);
+}
+
+/* Notificação e Interação de Portas do Corredor 3D */
+.corridor-door-notification {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: rgba(14, 18, 38, 0.94);
+  border: 1px solid var(--color-luminous-purple);
+  color: #f0ecfc;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 25px rgba(165, 138, 232, 0.6);
+  pointer-events: none;
+  z-index: 85;
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.corridor-door-notification.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }

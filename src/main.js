@@ -6,6 +6,7 @@ import { SCENE_BACKGROUNDS } from './data/sceneAssets.js';
 
 import { PUZZLES } from './data/puzzles.js';
 import { audioSystem } from './audioSystem.js';
+import { Corridor3DScene } from './corridor3d.js';
 
 
 
@@ -105,7 +106,7 @@ class NoctariaGame {
 
     this.saveGame();
 
-    this.changeChapter('prologue');
+    this.changeChapter('prologue', false);
 
     this.startDialogue('elias_arrival', 'start');
 
@@ -164,9 +165,11 @@ class NoctariaGame {
 
   // --- PROGRESSÃO DE FASES & CAPÍTULOS ---
 
-  changeChapter(chapterId) {
-    audioSystem.playFootstep(true);
-    audioSystem.playDoor('open');
+  changeChapter(chapterId, playTransitionSound = true) {
+    if (playTransitionSound) {
+      audioSystem.playFootstep(true);
+      audioSystem.playDoor('open');
+    }
 
     this.state.currentChapter = chapterId;
 
@@ -632,17 +635,120 @@ class NoctariaGame {
 
     this.openQuestCompletionModal(title, summary, nextChapter);
 
+  }  // --- INTRODUÇÃO CINEMATOGRÁFICA ---
+  playIntroSequence(onComplete) {
+    const introEl = document.createElement('div');
+    introEl.className = 'intro-screen';
+    introEl.id = 'intro-screen';
+
+    const castleSvg = `
+      <svg class="intro-castle-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 12 88 L 12 48 L 18 48 L 18 36 L 24 36 L 24 48 L 30 48 L 30 54 L 38 54 L 38 42 L 34 42 L 34 32 L 40 32 L 40 22 L 44 22 L 44 14 L 46 14 L 46 8 L 48 8 L 48 4 L 52 4 L 52 8 L 54 8 L 54 14 L 56 14 L 56 22 L 60 22 L 60 32 L 66 32 L 66 42 L 62 42 L 62 54 L 70 54 L 70 48 L 76 48 L 76 36 L 82 36 L 82 48 L 88 48 L 88 88 L 62 88 L 62 72 C 62 64 58 60 50 60 C 42 60 38 64 38 72 L 38 88 Z" />
+        <rect x="20" y="58" width="5" height="9" rx="2" fill="#000000" />
+        <rect x="75" y="58" width="5" height="9" rx="2" fill="#000000" />
+        <rect x="47" y="32" width="6" height="12" rx="3" fill="#000000" />
+      </svg>
+    `;
+
+    const titleLetters = 'NOCTÁRIA'.split('').map((l, i) => `<span class="intro-letter" data-index="${i}">${l}</span>`).join('');
+
+    introEl.innerHTML = `
+      <div class="intro-content" id="intro-content">
+        <div class="intro-title" id="intro-title">${titleLetters}</div>
+        <div class="intro-castle-wrapper" id="intro-castle">${castleSvg}</div>
+      </div>
+      <button class="intro-skip-btn" id="intro-skip-btn">Pular ➔</button>
+    `;
+
+    document.body.appendChild(introEl);
+
+    let isFinished = false;
+    const finishIntro = () => {
+      if (isFinished) return;
+      isFinished = true;
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      introEl.classList.add('fade-out');
+      setTimeout(() => {
+        if (introEl.parentNode) introEl.parentNode.removeChild(introEl);
+        if (onComplete) onComplete();
+      }, 500);
+    };
+
+    introEl.querySelector('#intro-skip-btn').onclick = finishIntro;
+
+    const castleWrapper = introEl.querySelector('#intro-castle');
+    const letters = introEl.querySelectorAll('.intro-letter');
+    const container = introEl.querySelector('#intro-content');
+
+    let animationFrameId = null;
+    let startTime = null;
+    const rollDuration = 3200; // 3.2 segundos para rolar suavemente da esquerda para a direita
+
+    const startX = -120; // Começa fora da tela pelo lado esquerdo
+    let endX = 0; // Posição calculada à direita
+
+    const updateDimensions = () => {
+      const containerWidth = container.offsetWidth || window.innerWidth;
+      // Para no lado direito, dando espaço de margem
+      endX = Math.min(containerWidth - 160, 920);
+    };
+    updateDimensions();
+
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(1, elapsed / rollDuration);
+
+      // Easing suave (easeOutCubic)
+      const ease = 1 - Math.pow(1 - progress, 3);
+
+      const currentX = startX + (endX - startX) * ease;
+      // 3 voltas completas (1080 graus) enquanto rola até parar exatamente na posição normal (0 graus)
+      const rotation = ease * 1080;
+
+      castleWrapper.style.transform = `translate3d(${currentX}px, 0, 0) rotate(${rotation}deg)`;
+
+      // Revela gradualmente as letras de NOCTÁRIA conforme o castelo passa por elas
+      const letterThreshold = 0.15;
+      const letterRange = 0.65;
+      letters.forEach((letEl, idx) => {
+        const threshold = letterThreshold + (idx / letters.length) * letterRange;
+        if (progress >= threshold && !letEl.classList.contains('revealed')) {
+          letEl.classList.add('revealed');
+        }
+      });
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      } else {
+        // Castelo parou perfeitamente em pé do lado direito
+        castleWrapper.style.transform = `translate3d(${endX}px, 0, 0) rotate(1080deg)`;
+        letters.forEach(letEl => letEl.classList.add('revealed'));
+
+        // Breve pausa para contemplar o castelo e o nome completo, depois aproximação/zoom
+        setTimeout(() => {
+          if (isFinished) return;
+          // Inicia aproximação cinematográfica para dentro do castelo
+          introEl.classList.add('zoom-in');
+
+          // Quando a câmera adentrar o castelo, finaliza a introdução e abre o jogo
+          setTimeout(() => {
+            finishIntro();
+          }, 1500);
+        }, 550);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
   }
-
-
 
   // --- INIT APPLICATION ---
-
   start() {
-
-    this.renderMainMenu();
-
+    this.playIntroSequence(() => {
+      this.renderMainMenu();
+    });
   }
+
 
 
 
@@ -775,6 +881,97 @@ class NoctariaGame {
   }
 
 
+
+  // --- MODO DE EXPLORAÇÃO 3D DO CORREDOR ---
+  enter3DCorridor() {
+    audioSystem.playAmbience('corridor');
+    audioSystem.startBreathingLoop();
+
+    // Limpar cena anterior
+    this.root.innerHTML = `
+      <div class="corridor-3d-screen" id="corridor-3d-screen">
+        <div id="corridor-3d-canvas-container"></div>
+
+        <div class="corridor-loading" id="corridor-3d-loading">Carregando corredor de Noctária...</div>
+
+        <div class="corridor-hud">
+          <div class="corridor-hud-title">Corredor dos Ecos Ancestrais</div>
+          <div class="corridor-hud-desc">Explore a ala leste do castelo. Caminhe até o portal rúnico ao fundo.</div>
+        </div>
+
+        <div class="corridor-controls-guide">
+          <div class="corridor-ctrl-row">
+            <span class="corridor-key">W</span>
+            <span class="corridor-key">A</span>
+            <span class="corridor-key">S</span>
+            <span class="corridor-key">D</span>
+            <span>Mover Personagem</span>
+          </div>
+          <div class="corridor-ctrl-row">
+            <span class="corridor-key">Espaço</span>
+            <span>Pular</span>
+            <span class="corridor-key" style="margin-left: 8px;">Shift</span>
+            <span>Correr</span>
+          </div>
+          <div class="corridor-ctrl-row">
+            <span class="corridor-key">E</span>
+            <span>Interagir com Portas do Corredor</span>
+          </div>
+          <div class="corridor-ctrl-row">
+            <span class="corridor-key">Mouse</span>
+            <span>Mover Câmera (Clique na tela para travar)</span>
+          </div>
+        </div>
+
+        <div class="corridor-interact-prompt" id="corridor-interact-prompt">
+          <button class="btn-enter-gate" id="btn-enter-gate">✦ ADENTRAR SALÃO DAS CINZAS ✦</button>
+        </div>
+      </div>
+    `;
+
+    const container = document.getElementById('corridor-3d-canvas-container');
+    this.activeCorridor3D = new Corridor3DScene(container, {
+      onInteract: () => {
+        this.exit3DCorridor();
+      },
+      onDoorInteract: (door) => {
+        this.handleCorridorDoorInteract(door);
+      }
+    });
+
+    const enterBtn = document.getElementById('btn-enter-gate');
+    if (enterBtn) {
+      enterBtn.onclick = () => {
+        this.exit3DCorridor();
+      };
+    }
+  }
+
+  handleCorridorDoorInteract(door) {
+    if (door.id === 'door_basement') {
+      audioSystem.playDoor('open');
+      audioSystem.playFootstep(true);
+      this.showNotification('🚪 Você abriu a porta do Porão Antigo! Adentrando as catacumbas...', 'quest');
+      setTimeout(() => {
+        if (this.activeCorridor3D) {
+          this.activeCorridor3D.dispose();
+          this.activeCorridor3D = null;
+        }
+        this.changeChapter('phase_1');
+      }, 1200);
+    } else {
+      audioSystem.playDoor('handle');
+      this.showNotification('🔒 ' + door.name + ': ' + door.inspectText, 'info');
+    }
+  }
+
+  exit3DCorridor() {
+    if (this.activeCorridor3D) {
+      this.activeCorridor3D.dispose();
+      this.activeCorridor3D = null;
+    }
+    this.changeChapter('phase_1');
+  }
 
   // --- CENA JOGÁVEL E VIEWPORT ---
 
@@ -3788,110 +3985,111 @@ class NoctariaGame {
 
 
 
+    if (this.textRevealTimeout) clearTimeout(this.textRevealTimeout);
     if (this.textRevealInterval) clearInterval(this.textRevealInterval);
 
     const fullText = node.text;
-
     let charIndex = 0;
-
-    textEl.innerText = '';
-
-
+    textEl.textContent = '';
 
     const showOptions = () => {
-
       optionsContainer.innerHTML = '';
-
       if (node.isEnd) {
-
         const closeBtn = document.createElement('button');
-
         closeBtn.className = 'dialogue-opt-btn';
-
-        closeBtn.innerHTML = `<span class="dialogue-opt-marker">✦</span> Continuar jornada`;
-
+        closeBtn.innerHTML = '<span class="dialogue-opt-marker">✦</span> <kbd class="dialogue-key-hint" title="Enter">↵</kbd> Continuar jornada';
         closeBtn.onclick = () => {
-
+          const isInitialDialogue = this.activeDialogue && this.activeDialogue.characterId === 'elias' && this.state.currentChapter === 'prologue';
           if (node.onComplete) node.onComplete(this);
-
           existingOverlay.remove();
-
+          if (isInitialDialogue) {
+            this.enter3DCorridor();
+          }
         };
-
         optionsContainer.appendChild(closeBtn);
-
       } else {
-
         availableOptions.forEach((opt, idx) => {
-
           const btn = document.createElement('button');
-
           btn.className = 'dialogue-opt-btn';
-
-          btn.innerHTML = `<span class="dialogue-opt-marker">${String.fromCharCode(65 + idx)}.</span> ${opt.text}`;
-
+          const keyLabel = String.fromCharCode(65 + idx);
+          btn.innerHTML = `<span class="dialogue-opt-marker"><kbd class="dialogue-key-hint">${keyLabel}</kbd></span>${opt.text}`;
           btn.onclick = () => {
-
             if (opt.effect) opt.effect(this.state);
-
             this.saveGame();
-
             if (opt.nextNode) {
-
               this.renderDialogueNode(this.activeDialogue.nodes[opt.nextNode]);
-
             }
-
           };
-
           optionsContainer.appendChild(btn);
-
         });
-
       }
-
     };
 
-
+    // Sincronização em tempo real entre a escrita e a fala
+    let isFinished = false;
+    const finishDialogue = () => {
+      if (isFinished) return;
+      isFinished = true;
+      if (this.textRevealTimeout) clearTimeout(this.textRevealTimeout);
+      textEl.textContent = fullText;
+      showOptions();
+    };
 
     if (this.state.settings.textSpeed === 'instant') {
-
-      textEl.innerText = fullText;
-
-      showOptions();
-
+      finishDialogue();
+      if (this.activeDialogue && node && node.text) {
+        audioSystem.speakText(node.text, this.activeDialogue.characterId);
+      }
     } else {
+      // Ritmo fluido de digitação que acompanha com precisão a cadência da fala
+      const baseDelay = this.state.settings.textSpeed === 'fast' ? 24 : 38;
 
-      this.textRevealInterval = setInterval(() => {
-
+      const typeNextChar = () => {
+        if (isFinished) return;
         if (charIndex < fullText.length) {
-
-          textEl.innerText += fullText[charIndex];
-
+          const char = fullText[charIndex];
+          textEl.textContent += char;
           charIndex++;
 
+          let delay = baseDelay;
+          if (char === '.' || char === '!' || char === '?') {
+            delay = baseDelay + 220; // Pausa natural entre frases
+          } else if (char === ',' || char === ';' || char === ':') {
+            delay = baseDelay + 120; // Pausa suave em pontuações
+          } else if (char === '—' || char === '…') {
+            delay = baseDelay + 150;
+          }
+
+          this.textRevealTimeout = setTimeout(typeNextChar, delay);
         } else {
-
-          clearInterval(this.textRevealInterval);
-
-          showOptions();
-
+          finishDialogue();
         }
-
-      }, 16);
-
-
-
-      textEl.onclick = () => {
-
-        clearInterval(this.textRevealInterval);
-
-        textEl.innerText = fullText;
-
-        showOptions();
-
       };
 
+      // Inicia a fala sincronizada com os limites de palavras e término
+      if (this.activeDialogue && node && node.text) {
+        audioSystem.speakText(
+          node.text,
+          this.activeDialogue.characterId,
+          (wordCharIndex) => {
+            // Se a fala avançar mais rápido, sincroniza a digitação para acompanhar instantaneamente
+            if (charIndex < wordCharIndex) {
+              textEl.textContent = fullText.substring(0, wordCharIndex);
+              charIndex = wordCharIndex;
+            }
+          },
+          () => {
+            // Ao terminar a fala humana, conclui a exibição do texto e opções
+            finishDialogue();
+          }
+        );
+      }
+
+      typeNextChar();
+
+      textEl.onclick = () => {
+        finishDialogue();
+      };
     }
 
   }
@@ -4494,6 +4692,110 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
 
+
+    // =====================================================================
+    // SISTEMA DE CURSOR CUSTOMIZADO DE INVESTIGACAO
+    // =====================================================================
+    const cursorEl = document.getElementById('custom-cursor');
+    const cursorIcon = document.getElementById('cursor-icon');
+
+    if (cursorEl) {
+      // Segue o mouse com suavidade
+      document.addEventListener('mousemove', (e) => {
+        cursorEl.style.left = e.clientX + 'px';
+        cursorEl.style.top  = e.clientY + 'px';
+      });
+
+      // Detecta hover em elementos interativos e muda o estado do cursor
+      document.addEventListener('mouseover', (e) => {
+        const hotspot = e.target.closest('.hotspot');
+        const dialogueBtn = e.target.closest('.dialogue-opt-btn');
+        const btn = e.target.closest('button, .inventory-card, .map-card');
+
+        if (hotspot) {
+          const label = hotspot.querySelector('.hotspot-label');
+          const isTalk = label && /falar|crowe|vale|vespera|octavian|celeste|seraphine/i.test(label.textContent);
+          if (isTalk) {
+            document.body.classList.add('cursor-talk');
+            document.body.classList.remove('cursor-inspect');
+            if (cursorIcon) cursorIcon.textContent = '💬';
+          } else {
+            document.body.classList.add('cursor-inspect');
+            document.body.classList.remove('cursor-talk');
+            if (cursorIcon) cursorIcon.textContent = '🔍';
+          }
+        } else if (dialogueBtn || btn) {
+          document.body.classList.add('cursor-inspect');
+          document.body.classList.remove('cursor-talk');
+          if (cursorIcon) cursorIcon.textContent = '✦';
+        }
+      });
+
+      document.addEventListener('mouseout', (e) => {
+        const isInteractive = e.target.closest('button, .hotspot, .inventory-card, .map-card, .dialogue-opt-btn');
+        if (isInteractive) {
+          if (!e.relatedTarget || !e.relatedTarget.closest('button, .hotspot, .inventory-card, .map-card, .dialogue-opt-btn')) {
+            document.body.classList.remove('cursor-inspect', 'cursor-talk');
+          }
+        }
+      });
+
+      // Pulso visual no cursor ao clicar
+      document.addEventListener('mousedown', () => {
+        cursorEl.style.transform = 'translate(-50%, -50%) scale(0.72)';
+      });
+      document.addEventListener('mouseup', () => {
+        cursorEl.style.transform = 'translate(-50%, -50%) scale(1)';
+      });
+    }
+
+    // =====================================================================
+    // ATALHOS DE TECLADO GLOBAIS PARA DIALOGO
+    // =====================================================================
+    document.addEventListener('keydown', (e) => {
+      const key = e.key.toUpperCase();
+
+      // Teclas A-Z para opcoes de dialogo (A=opcao1, B=opcao2, C=opcao3...)
+      if (key.length === 1 && key >= 'A' && key <= 'Z') {
+        const dialogueOptions = document.querySelectorAll('#dialogue-options-list .dialogue-opt-btn');
+        if (dialogueOptions.length > 0) {
+          const index = key.charCodeAt(0) - 65;
+          if (dialogueOptions[index]) {
+            e.preventDefault();
+            dialogueOptions[index].classList.add('kbd-active');
+            setTimeout(() => {
+              dialogueOptions[index].classList.remove('kbd-active');
+              dialogueOptions[index].click();
+            }, 150);
+            return;
+          }
+        }
+      }
+
+      // Enter ou Espaco: avanca o dialogo ou clica no unico botao disponivel
+      if (key === 'ENTER' || key === ' ') {
+        const dialogueText = document.getElementById('dialogue-text-body');
+        if (dialogueText) {
+          e.preventDefault();
+          const dialogueOptions = document.querySelectorAll('#dialogue-options-list .dialogue-opt-btn');
+          if (dialogueOptions.length === 1) {
+            dialogueOptions[0].classList.add('kbd-active');
+            setTimeout(() => {
+              dialogueOptions[0].classList.remove('kbd-active');
+              dialogueOptions[0].click();
+            }, 100);
+          } else {
+            dialogueText.click();
+          }
+        }
+      }
+
+      // Escape: fecha modal aberto
+      if (key === 'ESCAPE') {
+        const closeBtn = document.getElementById('modal-close-x');
+        if (closeBtn) closeBtn.click();
+      }
+    });
   const game = new NoctariaGame();
 
   game.start();

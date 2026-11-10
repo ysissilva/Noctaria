@@ -367,28 +367,93 @@ class AudioSystem {
     }
   }
 
-  // --- FALAS E DIÁLOGOS HUMANOS (VOICE MURMUR / SPEECH) ---
-  speakText(text, characterId = 'elias') {
+    // --- SELEÇÃO DE VOZES HUMANAS E PERSONALIZADAS POR PERSONAGEM ---
+  getVoicesPool() {
+    if (!('speechSynthesis' in window)) return [];
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return [];
+    
+    // Preferência absoluta por vozes com suporte natural a pt-BR
+    const ptVoices = voices.filter(v => 
+      v.lang.toLowerCase().replace('_', '-').startsWith('pt-br') ||
+      v.lang.toLowerCase().replace('_', '-').startsWith('pt')
+    );
+    return ptVoices.length > 0 ? ptVoices : voices;
+  }
+
+  getVoiceForCharacter(characterId) {
+    const pool = this.getVoicesPool();
+    if (pool.length === 0) return null;
+
+    // Perfis de busca priorizando vozes neurais / naturais do Edge / Chrome / Windows
+    // Ex: Microsoft Francisca Online (Natural), Maria, Daniel, Antonio, etc.
+    const searchKeys = {
+      elias: ['daniel', 'felipe', 'ricardo', 'antonio', 'male', 'homem'],
+      octavian: ['antonio', 'antônio', 'ricardo', 'david', 'male', 'homem'],
+      morgana: ['francisca', 'helena', 'thalita', 'luciana', 'maria', 'female', 'mulher'],
+      celeste: ['vitória', 'vitoria', 'leticia', 'letícia', 'camila', 'female', 'mulher'],
+      seraphine: ['maria', 'francisca', 'helena', 'zira', 'female', 'mulher'],
+      vespera: ['luciana', 'camila', 'maria', 'female', 'mulher']
+    };
+
+    const keys = searchKeys[characterId] || [];
+    // Prioriza vozes que contenham 'natural' ou 'online' (as mais humanas)
+    for (const key of keys) {
+      const matchNatural = pool.find(v => {
+        const n = v.name.toLowerCase();
+        return n.includes(key) && (n.includes('natural') || n.includes('neural') || n.includes('online'));
+      });
+      if (matchNatural) return matchNatural;
+    }
+
+    for (const key of keys) {
+      const match = pool.find(v => v.name.toLowerCase().includes(key));
+      if (match) return match;
+    }
+
+    return pool[0] || null;
+  }
+
+  // --- FALAS E DIÁLOGOS HUMANOS (NATURAIS E SINCRONIZADOS) ---
+  speakText(text, characterId = 'elias', onWordBoundary = null, onEnd = null) {
     if (this.isMuted || !('speechSynthesis' in window)) return;
     
-    // Configurar tom realista de voz baseado na personalidade do personagem
     window.speechSynthesis.cancel(); // Interrompe fala anterior
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'pt-BR';
     
-    const charTones = {
-      elias: { pitch: 0.9, rate: 0.95 },      // Jovem, misterioso, sério
-      morgana: { pitch: 0.85, rate: 0.9 },     // Solene, imponente, elegante
-      octavian: { pitch: 0.8, rate: 0.85 },    // Sábio, maduro, pausado
-      celeste: { pitch: 1.1, rate: 1.05 },     // Ágil, perspicaz, curiosa
-      seraphine: { pitch: 1.15, rate: 0.85 },  // Eco distante, etérea
-      vespera: { pitch: 0.95, rate: 0.88 }     // Sussurrada, enigmática
+    // Configurações personalizadas por personagem: tom (pitch) e ritmo humano e calmo (rate)
+    const charProfiles = {
+      elias: { pitch: 0.96, rate: 0.98 },       // Jovem, sério, cadência natural e humana
+      octavian: { pitch: 0.82, rate: 0.94 },    // Sábio, voz mais grave e profunda
+      morgana: { pitch: 1.08, rate: 0.96 },     // Solene, autoritária, calma
+      celeste: { pitch: 1.18, rate: 1.02 },     // Jovem alquimista, levemente mais dinâmica e curiosa
+      seraphine: { pitch: 1.22, rate: 0.92 },   // Mística, tom suave e etéreo
+      vespera: { pitch: 1.04, rate: 0.95 }      // Enigmática, sussurrada e ponderada
     };
 
-    const cfg = charTones[characterId] || { pitch: 1.0, rate: 1.0 };
-    utterance.pitch = cfg.pitch;
-    utterance.rate = cfg.rate;
+    const profile = charProfiles[characterId] || { pitch: 1.0, rate: 1.0 };
+    const voice = this.getVoiceForCharacter(characterId);
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    utterance.pitch = profile.pitch;
+    utterance.rate = profile.rate;
     utterance.volume = (this.volumes.master / 100) * (this.volumes.voices / 100);
+
+    if (onWordBoundary) {
+      utterance.onboundary = (e) => {
+        if (e.name === 'word') {
+          onWordBoundary(e.charIndex);
+        }
+      };
+    }
+
+    if (onEnd) {
+      utterance.onend = onEnd;
+      utterance.onerror = onEnd;
+    }
 
     window.speechSynthesis.speak(utterance);
   }

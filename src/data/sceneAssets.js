@@ -478,7 +478,15 @@ export function generateEpilogueRoomSvg() {
   </svg>`;
 }
 
+// Função para gerar o Corredor do Castelo 2D fiel à imagem CORREDORES
+export function generateCastleCorridorSvg() {
+  // Retorna diretamente a imagem original em alta definição de corredores.png
+  // complementada por iluminação atmosférica adicional
+  return '/assets/images/corredores.png';
+}
+
 export const SCENE_BACKGROUNDS = {
+  corridor: generateCastleCorridorSvg,
   courtyard: generateCourtyardSvg,
   ashes_hall: generateAshesHallSvg,
   library: generateLibrarySvg,
