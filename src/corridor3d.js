@@ -39,7 +39,20 @@ export class Corridor3DScene {
       isGrounded: true,
       jumpVelocityY: 0,
       jumpStrength: 6.8,
-      gravity: -18.0
+      gravity: -18.0,
+      // Animação de estender o braço para abrir portas
+      doorReachTimer: 0,
+      isReachingDoor: false
+    };
+
+    // Referências aos ossos do braço para animação cinemática/procedural
+    this.bones = {
+      head: null,
+      neck: null,
+      spine2: null,
+      rightArm: null,
+      rightForeArm: null,
+      rightHand: null
     };
 
     // Controle de Câmera com Mouse (Terceira pessoa e Primeira pessoa)
@@ -654,6 +667,10 @@ export class Corridor3DScene {
   interactWithCurrentDoor() {
     if (!this.activeNearDoor) return;
 
+    // Disparar animação realista de mover o braço em direção à maçaneta
+    this.player.isReachingDoor = true;
+    this.player.doorReachTimer = 1.0; // Duração de 1 segundo
+
     if (this.activeNearDoor.isOpenable) {
       this.activeNearDoor.isOpen = !this.activeNearDoor.isOpen;
       // Girar porta abrindo para dentro
@@ -709,9 +726,10 @@ export class Corridor3DScene {
     });
   }
 
-    loadCharacterModel() {
+  loadCharacterModel() {
     const loader = new GLTFLoader();
-    const modelUrl = '/assets/models/Xbot.glb';
+    // Modelo 3D humanizado masculino com malha anatômica natural
+    const modelUrl = '/assets/models/Soldier.glb';
 
     loader.load(
       modelUrl,
@@ -719,25 +737,26 @@ export class Corridor3DScene {
         if (this.isDisposed) return;
 
         this.model = gltf.scene;
+        // Ajustar escala do modelo para altura realista no corredor
         this.model.scale.set(1.4, 1.4, 1.4);
         this.model.position.copy(this.player.position);
         this.model.rotation.y = this.player.rotationY;
 
-        // Transformar o boneco manequim robótico em Elias Crowe (humano, roupa nobre gótica vitoriana)
+        // Mapear ossos e aplicar caracterização de Elias Crowe (cabelo ondulado, gola alta, pingente, cores da sobrecasaca)
         this.customizeEliasCrowe(this.model, gltf);
 
         this.scene.add(this.model);
 
-        // Configurar AnimationMixer e clipes
+        // Configurar AnimationMixer e mapear clipes de Idle, Walk e Run
         this.mixer = new THREE.AnimationMixer(this.model);
         gltf.animations.forEach((clip) => {
-          // Ajustar marcha e corrida para postura masculina e firme
-          const adjustedClip = this.adjustAnimationForMasculineWalk(clip);
-          const action = this.mixer.clipAction(adjustedClip);
+          const action = this.mixer.clipAction(clip);
+          const nameLower = clip.name.toLowerCase();
+          this.actions[nameLower] = action;
           this.actions[clip.name] = action;
         });
 
-        // Iniciar com animação Idle ativa
+        // Iniciar com animação de descanso (Idle)
         if (this.actions['idle']) {
           this.actions['idle'].play();
         } else if (gltf.animations.length > 0) {
@@ -752,34 +771,60 @@ export class Corridor3DScene {
         // Progresso
       },
       (error) => {
-        console.error('Erro ao carregar modelo 3D:', error);
-        const loadIndicator = document.getElementById('corridor-3d-loading');
-        if (loadIndicator) loadIndicator.textContent = 'Erro ao carregar modelo 3D.';
+        console.error('Erro ao carregar modelo 3D Soldier, recorrendo a modelo padrão:', error);
+        // Fallback para Xbot se necessário
+        const fallbackLoader = new GLTFLoader();
+        fallbackLoader.load('/assets/models/Xbot.glb', (fallbackGltf) => {
+          if (this.isDisposed) return;
+          this.model = fallbackGltf.scene;
+          this.model.scale.set(1.4, 1.4, 1.4);
+          this.model.position.copy(this.player.position);
+          this.model.rotation.y = this.player.rotationY;
+          this.customizeEliasCrowe(this.model, fallbackGltf);
+          this.scene.add(this.model);
+          this.mixer = new THREE.AnimationMixer(this.model);
+          fallbackGltf.animations.forEach(c => {
+            this.actions[c.name.toLowerCase()] = this.mixer.clipAction(c);
+          });
+          if (this.actions['idle']) this.actions['idle'].play();
+        });
       }
     );
   }
 
-  // Personaliza o corpo, veste sobrecasaca gótica bordada, preenche as juntas mecânicas e adiciona cabelos de Elias Crowe
+  // Personaliza o corpo com roupas nobres góticas vitorianas, feições e cabelos de Elias Crowe
   customizeEliasCrowe(model, gltf) {
     let surfaceMesh = null;
     let jointsMesh = null;
-    let headBone = null;
-    let spine2Bone = null;
-    let neckBone = null;
 
     model.traverse((child) => {
       if (child.isBone) {
-        if (child.name === 'mixamorig:Head') headBone = child;
-        if (child.name === 'mixamorig:Spine2') spine2Bone = child;
-        if (child.name === 'mixamorig:Neck') neckBone = child;
+        if (child.name === 'mixamorig:Head') this.bones.head = child;
+        if (child.name === 'mixamorig:Spine2') this.bones.spine2 = child;
+        if (child.name === 'mixamorig:Neck') this.bones.neck = child;
+        if (child.name === 'mixamorig:RightArm') this.bones.rightArm = child;
+        if (child.name === 'mixamorig:RightForeArm') this.bones.rightForeArm = child;
+        if (child.name === 'mixamorig:RightHand') this.bones.rightHand = child;
       }
       if (child.isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
-        if (child.name === 'Beta_Surface') surfaceMesh = child;
-        if (child.name === 'Beta_Joints') jointsMesh = child;
+        // Ocultar viseira/capacete metálico do soldado para revelar a cabeça humana
+        if (child.name.includes('visor') || child.name.includes('Visor')) {
+          child.visible = false;
+        }
+        if (child.name === 'vanguard_Mesh' || child.name === 'Beta_Surface') {
+          surfaceMesh = child;
+        }
+        if (child.name === 'Beta_Joints') {
+          jointsMesh = child;
+        }
       }
     });
+
+    const headBone = this.bones.head;
+    const spine2Bone = this.bones.spine2;
+    const neckBone = this.bones.neck;
 
     // Paleta de roupas nobres e tom de pele de Elias Crowe
     const colSkin = new THREE.Color(0xf5d3b3);       // Tom de pele humano claro e natural
@@ -795,7 +840,7 @@ export class Corridor3DScene {
     const colGlove = new THREE.Color(0x1a1618);      // Luvas de couro
     const colShirt = new THREE.Color(0x282634);      // Lenço/jabot vitoriano
 
-    // 1. REVESTIR AS JUNTAS/DOBRADIÇAS PARA PARECEREM TECIDO E CORPO HUMANO
+    // 1. REVESTIR AS JUNTAS/DOBRADIÇAS SE HOUVER (no caso de Xbot fallback)
     if (jointsMesh && jointsMesh.geometry) {
       jointsMesh.visible = true;
       const jGeo = jointsMesh.geometry;
@@ -819,27 +864,11 @@ export class Corridor3DScene {
         }
         const y = jPos.getY(i);
         let c = colCoat;
-
-        // Pescoço da junta: Pele humana de Elias Crowe
-        if (domJ === 4 || y > 1.46) {
-          c = colSkin;
-        }
-        // Dedos/juntas das mãos: Luvas de couro
-        else if (domJ === 12 || domJ === 36 || (domJ >= 13 && domJ <= 32) || (domJ >= 37 && domJ <= 56)) {
-          c = colGlove;
-        }
-        // Pés/tornozelos: Botas pretas
-        else if (domJ === 59 || domJ === 64 || y < 0.38) {
-          c = colBoots;
-        }
-        // Pernas/joelhos: Calça escura de alfaiataria
-        else if ((domJ === 58 || domJ === 63 || domJ === 57 || domJ === 62) && y < 0.88) {
-          c = colPants;
-        }
-        // Cintura/coluna: Tecido da sobrecasaca/colete
-        else {
-          c = colVest;
-        }
+        if (domJ === 4 || y > 1.46) c = colSkin;
+        else if (domJ === 12 || domJ === 36 || (domJ >= 13 && domJ <= 32) || (domJ >= 37 && domJ <= 56)) c = colGlove;
+        else if (domJ === 59 || domJ === 64 || y < 0.38) c = colBoots;
+        else if ((domJ === 58 || domJ === 63 || domJ === 57 || domJ === 62) && y < 0.88) c = colPants;
+        else c = colVest;
 
         jColors[i * 3] = c.r;
         jColors[i * 3 + 1] = c.g;
@@ -847,14 +876,13 @@ export class Corridor3DScene {
       }
 
       jGeo.setAttribute('color', new THREE.BufferAttribute(jColors, 3));
-      // Reutiliza e atualiza o material existente para manter o skinning do SkinnedMesh
       if (jointsMesh.material) {
         jointsMesh.material.vertexColors = true;
         jointsMesh.material.needsUpdate = true;
       }
     }
 
-    // 2. VESTIMENTA E ANATOMIA HUMANA NA SUPERFÍCIE (Beta_Surface)
+    // 2. VESTIMENTA E ANATOMIA HUMANA NA SUPERFÍCIE (Soldier vanguard_Mesh ou Beta_Surface)
     if (surfaceMesh && surfaceMesh.geometry) {
       const geo = surfaceMesh.geometry;
       const posAttr = geo.attributes.position;
@@ -880,67 +908,53 @@ export class Corridor3DScene {
           }
         }
 
-        // --- Atribuição de cores das roupas de Elias Crowe ---
         let c = colCoat;
 
-        // Cabeça e Face de Elias Crowe (joint 5)
-        if (domJoint === 5 || y >= 1.52) {
-          // Rosto frontal (z > 0.05)
-          if (z > 0.05) {
-            // Olhos marcantes e sobrancelhas
-            if (y >= 1.635 && y <= 1.685 && Math.abs(x) >= 0.015 && Math.abs(x) <= 0.065) {
+        // No modelo Soldier, Z é altura local (151..183 é cabeça), Y é profundidade (-15..+12)
+        const isSoldierHead = (domJoint === 5 && z > 140) || z > 155;
+        const isXbotHead = (domJoint === 5 || y >= 1.52) && z > 0.04;
+
+        if (isSoldierHead) {
+          // Rosto do Soldier
+          if (y > 2.0 && z > 156 && z < 178) {
+            // Olhos e sobrancelhas
+            if (z >= 166 && z <= 172 && Math.abs(x) >= 2.0 && Math.abs(x) <= 6.5) {
               c = colEyes;
-            }
-            // Lábios naturais
-            else if (y >= 1.555 && y <= 1.585 && Math.abs(x) <= 0.028) {
+            } else if (z >= 158 && z <= 162 && Math.abs(x) <= 3.2) {
               c = colLips;
-            }
-            // Sombra da linha da mandíbula
-            else if (y <= 1.56 && Math.abs(x) >= 0.04) {
-              c = colFaceShadow;
-            }
-            // Pele do rosto
-            else {
+            } else {
               c = colSkin;
             }
+          } else if (y < 0.0) {
+            c = new THREE.Color(0x0a0c10); // Base do cabelo
+          } else {
+            c = colSkin;
           }
-          // Lateral e parte de trás da cabeça (cabelo ou pele de base)
-          else if (z < 0.0) {
-            c = new THREE.Color(0x0a0c10); // Cabelo preto de base
+        } else if (isXbotHead) {
+          if (z > 0.05) {
+            if (y >= 1.635 && y <= 1.685 && Math.abs(x) >= 0.015 && Math.abs(x) <= 0.065) c = colEyes;
+            else if (y >= 1.555 && y <= 1.585 && Math.abs(x) <= 0.028) c = colLips;
+            else c = colSkin;
           } else {
             c = colSkin;
           }
         }
-        // Mãos: Luvas elegantes de couro
-        else if (
-          domJoint === 12 || domJoint === 36 ||
-          (domJoint >= 13 && domJoint <= 32) ||
-          (domJoint >= 37 && domJoint <= 56)
-        ) {
+        // Luvas
+        else if (domJoint === 9 || domJoint === 26 || (domJoint >= 10 && domJoint <= 22) || (domJoint >= 27 && domJoint <= 40)) {
           c = colGlove;
         }
-        // Pés: Botas pretas de montaria
-        else if (domJoint === 59 || domJoint === 64 || y < 0.38) {
+        // Botas
+        else if (domJoint === 43 || domJoint === 44 || domJoint === 47 || domJoint === 48 || z < 35 || y < 0.38) {
           c = colBoots;
         }
-        // Pernas: Calça escura de alfaiataria
-        else if ((domJoint === 58 || domJoint === 63 || domJoint === 57 || domJoint === 62) && y < 0.88) {
+        // Calça
+        else if (domJoint === 41 || domJoint === 42 || domJoint === 45 || domJoint === 46 || (z >= 35 && z < 95)) {
           c = colPants;
         }
-        // Tronco: Sobrecasaca nobre com colete e bordados prateados
+        // Tronco e Sobrecasaca
         else {
-          // Centro do peito: Camisa / Jabot / Colete interno
-          if (Math.abs(x) < 0.075 && z > 0.02 && y > 1.05 && y < 1.45) {
-            if (y > 1.36) {
-              c = colShirt;
-            } else if (Math.abs(x) < 0.015) {
-              c = colSilver;
-            } else {
-              c = colVest;
-            }
-          }
-          // Bordados prateados nas lapelas (como na arte oficial)
-          else if (Math.abs(x) >= 0.065 && Math.abs(x) <= 0.095 && z > 0.025 && y > 1.12 && y < 1.42) {
+          // Detalhes no peito
+          if (Math.abs(x) < 5.0 && z > 105 && z < 145) {
             c = colSilver;
           } else {
             c = colCoat;
@@ -953,8 +967,8 @@ export class Corridor3DScene {
       }
 
       geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      // Reutiliza e atualiza o material existente para manter o skinning funcionando
       if (surfaceMesh.material) {
+        // Preserva o mapa original com modulação de cor
         surfaceMesh.material.vertexColors = true;
         surfaceMesh.material.needsUpdate = true;
       }
@@ -1475,6 +1489,32 @@ export class Corridor3DScene {
 
     // Atualizar locomoção do jogador e física
     this.updatePlayer(delta);
+
+    // Animação cinemática/procedural do braço para abrir a porta ao interagir
+    if (this.player.isReachingDoor && this.bones.rightArm) {
+      this.player.doorReachTimer -= delta * 2.2;
+      const progress = Math.max(0, this.player.doorReachTimer);
+      // Arco suave de levantar o braço, alcançar a maçaneta e recolher
+      const reachFactor = Math.sin((1.0 - progress) * Math.PI);
+
+      if (this.bones.rightArm) {
+        // Eleva o braço para frente em direção à maçaneta
+        this.bones.rightArm.rotation.x += reachFactor * 1.35;
+        this.bones.rightArm.rotation.z -= reachFactor * 0.45;
+      }
+      if (this.bones.rightForeArm) {
+        // Flexiona o antebraço naturalmente
+        this.bones.rightForeArm.rotation.x += reachFactor * 0.65;
+      }
+      if (this.bones.rightHand) {
+        // Gira o punho para girar o trinco
+        this.bones.rightHand.rotation.y += reachFactor * 0.55;
+      }
+
+      if (this.player.doorReachTimer <= 0) {
+        this.player.isReachingDoor = false;
+      }
+    }
 
     // Renderizar cena
     if (this.renderer && this.scene && this.camera) {
