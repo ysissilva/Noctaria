@@ -899,33 +899,61 @@ class NoctariaGame {
           <div class="corridor-hud-desc">Explore a ala leste do castelo. Caminhe até o portal rúnico ao fundo.</div>
         </div>
 
-        <div class="corridor-controls-guide">
-          <div class="corridor-ctrl-row">
-            <span class="corridor-key">W</span>
-            <span class="corridor-key">A</span>
-            <span class="corridor-key">S</span>
-            <span class="corridor-key">D</span>
-            <span>Mover Personagem</span>
-          </div>
-          <div class="corridor-ctrl-row">
-            <span class="corridor-key">Espaço</span>
-            <span>Pular</span>
-            <span class="corridor-key" style="margin-left: 8px;">Shift</span>
-            <span>Correr</span>
-          </div>
-          <div class="corridor-ctrl-row">
-            <span class="corridor-key">E</span>
-            <span>Interagir com Portas</span>
-            <span class="corridor-key" style="margin-left: 8px;">V</span>
-            <span>1ª / 3ª Pessoa</span>
-          </div>
-          <div class="corridor-ctrl-row">
-            <span class="corridor-key">Scroll</span>
-            <span>Zoom Câmera / 1ª Pessoa</span>
-          </div>
-          <div class="corridor-ctrl-row">
-            <span class="corridor-key">Mouse</span>
-            <span>Girar Câmera (Clique na tela para travar)</span>
+        <div class="corridor-mini-menu-wrapper" id="corridor-mini-menu-wrapper">
+          <button class="corridor-menu-toggle-btn" id="corridor-menu-toggle-btn" title="Abrir Menu de Controles e Configurações (Tecla F)">
+            <span>☰ MENU</span>
+            <span class="corridor-key" style="margin-left: 8px;">F</span>
+          </button>
+
+          <div class="corridor-mini-menu-panel" id="corridor-mini-menu-panel">
+            <div class="corridor-mini-menu-header">
+              <span>Menu Rápido</span>
+              <button class="corridor-mini-menu-close" id="corridor-mini-menu-close" aria-label="Fechar">&times;</button>
+            </div>
+
+            <div class="corridor-mini-menu-section-title">Controles</div>
+            <div class="corridor-controls-guide">
+              <div class="corridor-ctrl-row">
+                <span class="corridor-key">W</span>
+                <span class="corridor-key">A</span>
+                <span class="corridor-key">S</span>
+                <span class="corridor-key">D</span>
+                <span>Mover Personagem</span>
+              </div>
+              <div class="corridor-ctrl-row">
+                <span class="corridor-key">Espaço</span>
+                <span>Pular</span>
+                <span class="corridor-key" style="margin-left: 8px;">Shift</span>
+                <span>Correr</span>
+              </div>
+              <div class="corridor-ctrl-row">
+                <span class="corridor-key">E</span>
+                <span>Interagir com Portas</span>
+                <span class="corridor-key" style="margin-left: 8px;">V</span>
+                <span>1ª / 3ª Pessoa</span>
+              </div>
+              <div class="corridor-ctrl-row">
+                <span class="corridor-key">F</span>
+                <span>Abrir / Fechar Menu</span>
+                <span class="corridor-key" style="margin-left: 8px;">C</span>
+                <span>Configurações</span>
+              </div>
+              <div class="corridor-ctrl-row">
+                <span class="corridor-key">Scroll</span>
+                <span>Zoom Câmera / 1ª Pessoa</span>
+              </div>
+              <div class="corridor-ctrl-row">
+                <span class="corridor-key">Mouse</span>
+                <span>Girar Câmera (Clique na tela para travar)</span>
+              </div>
+            </div>
+
+            <div class="corridor-mini-menu-actions">
+              <button class="btn-gothic corridor-settings-btn" id="corridor-open-settings-btn" title="Abrir Configurações (Tecla C)">
+                <span>⚙ CONFIGURAÇÕES</span>
+                <span class="corridor-key" style="margin-left: 8px;">C</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -935,6 +963,34 @@ class NoctariaGame {
       </div>
     `;
 
+    const menuToggleBtn = document.getElementById('corridor-menu-toggle-btn');
+    const menuPanel = document.getElementById('corridor-mini-menu-panel');
+    const menuCloseBtn = document.getElementById('corridor-mini-menu-close');
+    const openSettingsBtn = document.getElementById('corridor-open-settings-btn');
+
+    const toggleCorridorMenu = () => {
+      if (!menuPanel) return;
+      if (document.pointerLockElement) {
+        document.exitPointerLock?.();
+      }
+      audioSystem.playUi('click');
+      menuPanel.classList.toggle('open');
+    };
+
+    const toggleCorridorSettings = () => {
+      if (document.pointerLockElement) {
+        document.exitPointerLock?.();
+      }
+      if (menuPanel) {
+        menuPanel.classList.remove('open');
+      }
+      if (this.activeModal) {
+        this.closeModal();
+      } else {
+        this.openSettingsModal();
+      }
+    };
+
     const container = document.getElementById('corridor-3d-canvas-container');
     this.activeCorridor3D = new Corridor3DScene(container, {
       onInteract: () => {
@@ -942,8 +998,39 @@ class NoctariaGame {
       },
       onDoorInteract: (door) => {
         this.handleCorridorDoorInteract(door);
+      },
+      onToggleMenu: () => {
+        toggleCorridorMenu();
+      },
+      onOpenSettings: () => {
+        toggleCorridorSettings();
       }
     });
+
+    if (menuToggleBtn && menuPanel) {
+      menuToggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleCorridorMenu();
+      };
+    }
+
+    if (menuCloseBtn && menuPanel) {
+      menuCloseBtn.onclick = (e) => {
+        e.stopPropagation();
+        menuPanel.classList.remove('open');
+      };
+    }
+
+    if (openSettingsBtn && menuPanel) {
+      openSettingsBtn.onclick = (e) => {
+        e.stopPropagation();
+        menuPanel.classList.remove('open');
+        if (document.pointerLockElement) {
+          document.exitPointerLock?.();
+        }
+        this.openSettingsModal();
+      };
+    }
 
     const enterBtn = document.getElementById('btn-enter-gate');
     if (enterBtn) {
