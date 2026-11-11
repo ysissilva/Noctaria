@@ -1,7 +1,8 @@
 import { CHARACTERS, SPELLS_DATABASE, PHASES_CONFIG, INITIAL_STATE } from './data/gameState.js';
 import { DIALOGUES } from './data/dialogues.js';
-import { SCENE_BACKGROUNDS, STORY_ILLUSTRATIONS } from './data/sceneAssets.js';
+import { SCENE_BACKGROUNDS } from './data/sceneAssets.js';
 import { PUZZLES } from './data/puzzles.js';
+import { World3DManager } from './systems/World3DManager.js';
 
 class NoctariaGame {
   constructor() {
@@ -12,6 +13,7 @@ class NoctariaGame {
     this.currentDialogueNode = null;
     this.textRevealInterval = null;
     this.activeSpell = null;
+    this.world3D = null;
 
     // Temporary minigame states
     this.tempState = {
@@ -20,6 +22,9 @@ class NoctariaGame {
       portraitsSelected: [],
       chimesSelected: []
     };
+
+    this.inspectedObjects = new Set();
+    this.activeParticleAnimation = null;
 
     this.loadState();
   }
@@ -81,6 +86,9 @@ class NoctariaGame {
 
   // --- PROGRESSÃO DE FASES & CAPÍTULOS ---
   changeChapter(chapterId) {
+    if (this.state.currentScene) {
+      this.state.previousScene = this.state.currentScene;
+    }
     this.state.currentChapter = chapterId;
     const config = PHASES_CONFIG[chapterId];
     if (config) {
@@ -94,12 +102,28 @@ class NoctariaGame {
   }
 
   changeScene(sceneId) {
-    this.state.currentScene = sceneId;
-    if (!this.state.unlockedScenes.includes(sceneId)) {
-      this.state.unlockedScenes.push(sceneId);
+    if (this.state.currentScene && this.state.currentScene !== sceneId) {
+      this.state.previousScene = this.state.currentScene;
     }
-    this.saveGame();
-    this.renderGameWorld();
+    const sceneContainer = document.querySelector('.scene-container');
+    if (sceneContainer) {
+      sceneContainer.classList.add('scene-transition-fade');
+      setTimeout(() => {
+        this.state.currentScene = sceneId;
+        if (!this.state.unlockedScenes.includes(sceneId)) {
+          this.state.unlockedScenes.push(sceneId);
+        }
+        this.saveGame();
+        this.renderGameWorld();
+      }, 350);
+    } else {
+      this.state.currentScene = sceneId;
+      if (!this.state.unlockedScenes.includes(sceneId)) {
+        this.state.unlockedScenes.push(sceneId);
+      }
+      this.saveGame();
+      this.renderGameWorld();
+    }
   }
 
   updateQuestStep(stepIndex) {
@@ -129,13 +153,15 @@ class NoctariaGame {
     }
   }
 
-  learnSpell(spellId) {
+  learnSpell(spellId, shouldRerender = true) {
     if (!this.state.player.spells.includes(spellId)) {
       this.state.player.spells.push(spellId);
       const spell = SPELLS_DATABASE[spellId];
       this.showNotification(`✦ Novo Feitiço Aprendido: ${spell.name}! ✦`, 'spell');
       this.saveGame();
-      this.renderGameWorld();
+      if (shouldRerender) {
+        this.renderGameWorld();
+      }
     }
   }
 
@@ -310,6 +336,19 @@ class NoctariaGame {
       };
     }
 
+    // ── CORREÇÃO DE PROGRESSÃO: actualizar o estado IMEDIATAMENTE ──
+    // Assim o jogador não fica preso mesmo que feche o modal pelo X.
+    if (nextChapter) {
+      this.state.currentChapter = nextChapter;
+      const nextConfig = PHASES_CONFIG[nextChapter];
+      if (nextConfig) {
+        this.state.currentScene = nextConfig.scene;
+        if (!this.state.unlockedScenes.includes(nextConfig.scene)) {
+          this.state.unlockedScenes.push(nextConfig.scene);
+        }
+      }
+    }
+
     this.saveGame();
     this.openQuestCompletionModal(title, summary, nextChapter);
   }
@@ -393,6 +432,7 @@ class NoctariaGame {
     const bgGenerator = SCENE_BACKGROUNDS[sceneId] || SCENE_BACKGROUNDS.courtyard;
     const bgUrl = bgGenerator();
     const phaseCfg = PHASES_CONFIG[this.state.currentChapter] || PHASES_CONFIG.prologue;
+    const currentLocCfg = Object.values(PHASES_CONFIG).find(p => p.scene === sceneId) || phaseCfg;
 
     // Available spells from player progression
     const playerSpells = this.state.player.spells.map(id => SPELLS_DATABASE[id]).filter(Boolean);
@@ -403,46 +443,84 @@ class NoctariaGame {
         <header class="game-topbar">
           <div class="topbar-location">
             <span class="loc-icon">🏛</span>
-            <span class="loc-name">${phaseCfg.locationName}</span>
-            <span class="map-card-phase" style="margin-left:12px; font-weight:bold;">${phaseCfg.title.split('—')[0]}</span>
+            <div class="topbar-title-group">
+              <span class="loc-name">${currentLocCfg.locationName}</span>
+              <span class="loc-category-badge">${currentLocCfg.category || 'Recinto Sagrado'}</span>
+            </div>
           </div>
           <div class="topbar-nav">
-            <button class="nav-btn" id="hud-map-btn" title="Mapa de Noctária e Viagem Rápida">
-              <span>Mapa</span>
-              <span class="badge-count">✦</span>
+            <button class="nav-btn nav-btn-primary" id="hud-map-btn" title="Mapa de Noctária e Viagem Rápida">
+              <span class="nav-icon">🗺</span>
+              <span>Mapa Arcano</span>
+              <span class="badge-count">${this.state.unlockedScenes.length}/10</span>
             </button>
-            <button class="nav-btn" id="hud-journal-btn">
+            <button class="nav-btn" id="hud-journal-btn" title="Diário de Pistas e Missões">
+              <span class="nav-icon">📖</span>
               <span>Diário</span>
               <span class="badge-count" id="journal-badge">${this.state.player.clues.length}</span>
             </button>
-            <button class="nav-btn" id="hud-inventory-btn">
+            <button class="nav-btn" id="hud-inventory-btn" title="Inventário de Relíquias">
+              <span class="nav-icon">🗝</span>
               <span>Inventário</span>
               <span class="badge-count" id="inventory-badge">${this.state.player.inventory.length}</span>
             </button>
-            <button class="nav-btn" id="hud-characters-btn">
+            <button class="nav-btn" id="hud-characters-btn" title="Relações e Arquivos de Personagens">
+              <span class="nav-icon">👥</span>
               <span>Personagens</span>
             </button>
-            <button class="nav-btn" id="hud-menu-btn">
+            <button class="nav-btn nav-btn-subtle" id="hud-menu-btn" title="Menu Principal">
+              <span class="nav-icon">⚙</span>
               <span>Menu</span>
             </button>
           </div>
         </header>
 
+        <!-- Exploration Info Banner (Atmosphere & Clues) -->
+        <aside class="scene-ambient-bar">
+          <div class="ambient-status">
+            <span class="status-dot"></span>
+            <span class="ambient-text">“${currentLocCfg.atmosphere || 'Uma quietude gótica paira no ambiente de pedra.'}”</span>
+          </div>
+          <div class="scene-actions-pills">
+            ${this.state.previousScene && this.state.previousScene !== sceneId ? `
+              <button class="scene-pill-btn scene-pill-back" id="btn-scene-back" title="Retornar ao ambiente anterior (${PHASES_CONFIG[Object.keys(PHASES_CONFIG).find(k => PHASES_CONFIG[k].scene === this.state.previousScene)]?.locationName || 'Local Anterior'})">
+                <span>⮌ Retornar</span>
+              </button>
+            ` : ''}
+            <button class="scene-pill-btn" id="btn-scene-observe" title="Examinar detalhes arquitetônicos e atmosfera da ala">
+              <span>👁 Examinar Ambiente</span>
+            </button>
+            <button class="scene-pill-btn" id="btn-scene-quickmap" title="Ver no Mapa Arcano">
+              <span>🧭 Cartografia</span>
+            </button>
+          </div>
+        </aside>
+
         <!-- Main Interactive Scene Container -->
         <main class="scene-container">
           <div class="scene-bg" id="scene-bg" style="background-image: url('${bgUrl}');"></div>
+          
+          <!-- Atmospheric lighting and living particles layer -->
+          <div class="scene-atmospheric-vignette"></div>
+          <canvas id="ambient-dust-canvas" class="scene-dust-canvas"></canvas>
+          <div class="torch-ambient-flicker torch-left"></div>
+          <div class="torch-ambient-flicker torch-right"></div>
+
+          <!-- Hotspots & Clickable World Layer -->
           <div class="scene-interactive-layer" id="interactive-layer"></div>
 
           <!-- Bottom Spell Bar -->
           <div class="spell-bar" id="spell-bar">
             ${playerSpells.length === 0 ? `
-              <div style="font-size:0.85rem; color:var(--color-text-dim); padding:6px 14px; font-style:italic;">
-                ✦ Nenhum feitiço dominado ainda. Investigue os manuscritos para aprender magia. ✦
+              <div class="spell-bar-empty">
+                <span class="spell-sparkle">✦</span>
+                <span>Nenhum feitiço dominado ainda. Investigue os manuscritos para aprender magia.</span>
+                <span class="spell-sparkle">✦</span>
               </div>
             ` : playerSpells.map(spell => `
               <button class="spell-btn ${this.activeSpell === spell.id ? 'active' : ''}" data-spell="${spell.id}" title="${spell.description}">
-                <span>${spell.icon}</span>
-                <span>${spell.name}</span>
+                <span class="spell-icon">${spell.icon}</span>
+                <span class="spell-title">${spell.name}</span>
               </button>
             `).join('')}
           </div>
@@ -457,6 +535,30 @@ class NoctariaGame {
     document.getElementById('hud-characters-btn').onclick = () => this.openCharactersModal();
     document.getElementById('hud-menu-btn').onclick = () => this.renderMainMenu();
 
+    // Scene ambient buttons
+    const btnBack = document.getElementById('btn-scene-back');
+    if (btnBack && this.state.previousScene) {
+      btnBack.onclick = () => {
+        this.changeScene(this.state.previousScene);
+      };
+    }
+
+    const btnObserve = document.getElementById('btn-scene-observe');
+    if (btnObserve) {
+      btnObserve.onclick = () => {
+        this.openInspectModal(
+          currentLocCfg.locationName,
+          `${currentLocCfg.description}\n\nAtmosfera local: ${currentLocCfg.atmosphere}\n\nIndícios notáveis nesta ala:\n• ${(currentLocCfg.cluesHere || ['Segredos ocultos sob o véu']).join('\n• ')}`,
+          'A exploração detalhada ajuda a desvendar enigmas e descobrir caminhos.'
+        );
+      };
+    }
+
+    const btnQuickMap = document.getElementById('btn-scene-quickmap');
+    if (btnQuickMap) {
+      btnQuickMap.onclick = () => this.openMapModal();
+    }
+
     // Connect spell buttons
     document.querySelectorAll('.spell-btn').forEach(btn => {
       btn.onclick = () => {
@@ -465,7 +567,71 @@ class NoctariaGame {
       };
     });
 
+    this.initLivingAtmosphere();
     this.renderSceneInteractiveElements();
+  }
+
+  // --- ATMOSFERA VIVA (PARTÍCULAS DE POEIRA ARCANA & BRILHOS) ---
+  initLivingAtmosphere() {
+    const canvas = document.getElementById('ambient-dust-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = canvas.width = canvas.offsetWidth || window.innerWidth;
+    let height = canvas.height = canvas.offsetHeight || window.innerHeight;
+
+    const onResize = () => {
+      if (!canvas) return;
+      width = canvas.width = canvas.offsetWidth || window.innerWidth;
+      height = canvas.height = canvas.offsetHeight || window.innerHeight;
+    };
+    window.addEventListener('resize', onResize);
+
+    const particles = [];
+    const count = 35;
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 2 + 0.6,
+        alpha: Math.random() * 0.7 + 0.2,
+        speedX: (Math.random() - 0.5) * 0.35,
+        speedY: -Math.random() * 0.45 - 0.15,
+        hue: Math.random() > 0.6 ? 265 : 220
+      });
+    }
+
+    if (this.activeParticleAnimation) {
+      cancelAnimationFrame(this.activeParticleAnimation);
+    }
+
+    const animate = () => {
+      if (!document.getElementById('ambient-dust-canvas')) return;
+      ctx.clearRect(0, 0, width, height);
+
+      particles.forEach(p => {
+        p.x += p.speedX;
+        p.y += p.speedY;
+        if (p.y < -10) {
+          p.y = height + 10;
+          p.x = Math.random() * width;
+        }
+        if (p.x < -10) p.x = width + 10;
+        if (p.x > width + 10) p.x = -10;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, 80%, 75%, ${p.alpha})`;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `hsl(${p.hue}, 90%, 70%)`;
+        ctx.fill();
+      });
+
+      this.activeParticleAnimation = requestAnimationFrame(animate);
+    };
+
+    animate();
   }
 
   updateHudBadges() {
@@ -497,7 +663,7 @@ class NoctariaGame {
 
       // O Portão que Aparece com 13 badaladas
       if (this.flags.prologueChimeRang && !this.flags.phantomDoorVanished) {
-        this.createHotspot(layer, '50%', '52%', 'Porta Fantasma (13ª Badaladas)', () => {
+        this.createHotspot(layer, '50%', '52%', 'Porta Fantasma (13ª Badalada)', () => {
           this.interactPhantomDoor();
         }, '#a58ae8');
       }
@@ -610,6 +776,7 @@ class NoctariaGame {
         this.createHotspot(layer, '18%', '36%', 'Frasco: Orvalho Lunar', () => {
           this.flags.ingredientLunarDew = true;
           this.showNotification('Coletado: Orvalho Lunar Destilado!', 'item');
+          this.checkPhase3Reagents();
           this.renderSceneInteractiveElements();
         });
       }
@@ -617,6 +784,7 @@ class NoctariaGame {
         this.createHotspot(layer, '26%', '36%', 'Frasco: Raiz de Mandrágora', () => {
           this.flags.ingredientAshRoot = true;
           this.showNotification('Coletado: Raiz de Mandrágora de Cinzas!', 'item');
+          this.checkPhase3Reagents();
           this.renderSceneInteractiveElements();
         });
       }
@@ -624,6 +792,7 @@ class NoctariaGame {
         this.createHotspot(layer, '74%', '36%', 'Frasco: Cinza de Fênix', () => {
           this.flags.ingredientNightPhoenix = true;
           this.showNotification('Coletado: Cinza de Fênix Noturna!', 'item');
+          this.checkPhase3Reagents();
           this.renderSceneInteractiveElements();
         });
       }
@@ -631,6 +800,7 @@ class NoctariaGame {
         this.createHotspot(layer, '82%', '36%', 'Frasco: Éter Rúnico', () => {
           this.flags.ingredientEther = true;
           this.showNotification('Coletado: Éter Rúnico Puro!', 'item');
+          this.checkPhase3Reagents();
           this.renderSceneInteractiveElements();
         });
       }
@@ -668,6 +838,11 @@ class NoctariaGame {
 
     // 6. FASE 5: A ALA LACRADA
     else if (scene === 'sealed_wing') {
+      // Elias Crowe — eco espectral
+      this.createHotspot(layer, '20%', '62%', 'Elias Crowe (Eco Espectral)', () => {
+        this.startDialogue('sealed_wing_echo', 'start');
+      }, '#a58ae8');
+
       // Runas ocultas na parede (reveladas por REVELARE)
       this.createHotspot(layer, '50%', '35%', this.flags.wallRunesRevealed ? 'Runas Decifradas • Abertura' : 'Parede Suspeita (Use REVELARE)', () => {
         if (!this.flags.wallRunesRevealed) {
@@ -696,6 +871,11 @@ class NoctariaGame {
 
     // 7. FASE 6: A GALERIA DAS MIL PORTAS
     else if (scene === 'gallery_doors') {
+      // Madam Vespera — guardiã da galeria
+      this.createHotspot(layer, '82%', '62%', 'Madam Vespera (A Guardiã)', () => {
+        this.startDialogue('gallery_vespera', 'start');
+      }, '#a58ae8');
+
       PUZZLES.galleryDoors.doors.forEach((door, idx) => {
         const leftOffsets = ['14%', '30%', '50%', '70%', '86%'];
         const topOffsets = ['58%', '50%', '42%', '50%', '58%'];
@@ -760,6 +940,11 @@ class NoctariaGame {
 
     // 10. EPÍLOGO: O OUTRO LADO
     else if (scene === 'epilogue_room') {
+      // Seraphine — conversa final
+      this.createHotspot(layer, '28%', '60%', 'Seraphine Ashford (Reflexão Final)', () => {
+        this.startDialogue('epilogue_reflection', 'start');
+      }, '#4ef0c4');
+
       // Nova carta na escrivaninha
       this.createHotspot(layer, '48%', '78%', 'Nova Carta sem Remetente', () => {
         this.examineEpilogueLetter();
@@ -779,15 +964,73 @@ class NoctariaGame {
 
   createHotspot(parent, left, top, label, onClick, color = '#A58AE8') {
     const spot = document.createElement('div');
-    spot.className = 'hotspot';
+    const isCharacter = label.includes('Crowe') || label.includes('Morgana') || label.includes('Vespera') || label.includes('Octavian') || label.includes('Celeste') || label.includes('Seraphine');
+    const isPuzzle = label.includes('Enigma') || label.includes('Decifração') || label.includes('Caldeirão') || label.includes('Retratos') || label.includes('Badaladas');
+    const isSpellObject = label.includes('REVELARE') || label.includes('MEMORIA') || label.includes('APERTURA') || label.includes('Runas');
+    const isEntrance = label.includes('Entrada') || label.includes('Passagem') || label.includes('Portal') || label.includes('Acesso') || label.includes('Fissura');
+    
+    let kindClass = 'kind-investigate';
+    let iconChar = '🔍';
+    let badgeText = 'Examinar';
+
+    if (isCharacter) {
+      kindClass = 'kind-dialogue';
+      iconChar = '💬';
+      badgeText = 'Conversar';
+    } else if (isPuzzle) {
+      kindClass = 'kind-puzzle';
+      iconChar = '⚙';
+      badgeText = 'Enigma';
+    } else if (isSpellObject) {
+      kindClass = 'kind-spell';
+      iconChar = '✦';
+      badgeText = 'Arcano';
+    } else if (isEntrance) {
+      kindClass = 'kind-travel';
+      iconChar = '🗝';
+      badgeText = 'Avançar';
+    }
+
+    const stateKey = `${this.state.currentScene}_${label}`;
+    const isInvestigated = this.inspectedObjects.has(stateKey);
+
+    spot.className = `hotspot ${kindClass} ${isInvestigated ? 'is-investigated' : 'is-unexplored'}`;
     spot.style.left = left;
     spot.style.top = top;
+    spot.setAttribute('role', 'button');
+    spot.setAttribute('tabindex', '0');
+    spot.setAttribute('aria-label', label);
+
     spot.innerHTML = `
+      <div class="hotspot-aura"></div>
       <div class="hotspot-pulse"></div>
-      <div class="hotspot-pin" style="background:${color};"></div>
-      <div class="hotspot-label">${label}</div>
+      <div class="hotspot-pin" style="--pin-color:${color};">
+        <span class="hotspot-icon">${iconChar}</span>
+      </div>
+      <div class="hotspot-badge-tag">
+        <span class="badge-cat">${badgeText}</span>
+        <span class="badge-name">${label}</span>
+        <span class="badge-status">${isInvestigated ? '✓ Investigado' : '● Novo'}</span>
+      </div>
     `;
-    spot.onclick = onClick;
+
+    spot.onclick = (e) => {
+      e.stopPropagation();
+      this.inspectedObjects.add(stateKey);
+      spot.classList.remove('is-unexplored');
+      spot.classList.add('is-investigated');
+      const statusEl = spot.querySelector('.badge-status');
+      if (statusEl) statusEl.innerText = '✓ Investigado';
+
+      // Visual click ripple
+      const ripple = document.createElement('div');
+      ripple.className = 'hotspot-click-fx';
+      spot.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+
+      onClick();
+    };
+
     parent.appendChild(spot);
   }
 
@@ -798,11 +1041,11 @@ class NoctariaGame {
       'Carta Caída na Escadaria',
       'Um envelope sem selo oficial de Noctária. A caligrafia é nervosa, traçada com tinta púrpura:\n\n“Quando o grande sino soar treze badaladas, não corra para as salas comuns. Procure a porta que não consta nos diagramas da fundação. Eles apagam o que não conseguem controlar.”',
       'Um primeiro indício vital foi gravado no seu diário de bordo.',
-      STORY_ILLUSTRATIONS.prologue_letter()
+      '/assets/images/objects/letter.jpg'
     );
     this.addClue({
       id: 'clue_thirteen_chimes_warning',
-      title: 'O Aviso da Décima Terceira Badaladas',
+      title: 'O Aviso da Décima Terceira Badalada',
       description: 'A carta misteriosa avisa sobre uma porta que se manifesta apenas quando o sino soa 13 badaladas.',
       location: 'Portões da Noite',
       date: 'Prólogo'
@@ -840,10 +1083,10 @@ class NoctariaGame {
       'A Porta Fantasma',
       'Uma colossal moldura de pedra rúnica com entalhes de treze estrelas materializou-se no meio do saguão! Conforme você dá o primeiro passo em direção à maçaneta de prata, o ar vibra e a porta se dissolve no nada, deixando apenas cinzas flutuantes.',
       'O Prólogo foi concluído com sucesso. O Salão das Cinzas e o mistério de Seraphine aguardam você!',
-      STORY_ILLUSTRATIONS.phantom_door()
+      null,
+      () => this.completeCurrentPhase()
     );
     this.updateQuestStep(3);
-    this.completeCurrentPhase();
   }
 
   // --- FASE 1: INVESTIGAÇÕES ---
@@ -852,8 +1095,7 @@ class NoctariaGame {
     this.openInspectModal(
       'Mural de Avisos dos Alunos',
       'Dezenas de panfletos sobre aulas de astrologia, duelos rúnicos e toques de recolher. No canto inferior, um aviso amarelado de mérito acadêmico teve o nome da aluna premiada riscado à tinta preta. Sob a luz inclinada, ainda é possível ler: "...phíne Ashf...d".',
-      'Pista anotada: Parte do nome oculto foi resgatado.',
-      STORY_ILLUSTRATIONS.notice_board()
+      'Pista anotada: Parte do nome oculto foi resgatado.'
     );
     this.addClue({
       id: 'clue_mural_name',
@@ -867,11 +1109,11 @@ class NoctariaGame {
 
   examineErasedPortrait() {
     this.flags.erasedPhotoExamined = true;
+    this.updateQuestStep(1);
     this.openInspectModal(
       'Retrato Adulterado',
       'Uma pintura a óleo da turma honorária de três anos atrás. O rosto da estudante que segura o astrolábio foi meticulosamente raspado com lâmina. No verso da moldura de mogno, uma inscrição a lápis diz: "S. A. — Turma 42".',
-      'As iniciais batem exatamente com as letras encontradas no mural!',
-      STORY_ILLUSTRATIONS.erased_portrait()
+      'As iniciais batem exatamente com as letras encontradas no mural!'
     );
     this.addClue({
       id: 'clue_portrait_initials',
@@ -885,11 +1127,11 @@ class NoctariaGame {
 
   examineAlteredLedger() {
     this.flags.alteredLedgerExamined = true;
+    this.updateQuestStep(2);
     this.openInspectModal(
       'Livro de Matrículas Oficial de Noctária',
       'Um tomo solene encadernado em couro negro. Ao folhear as matrículas, você percebe que a folha referente ao número 42 foi arrancada à força rente à lombada. Alguém deixou um bilhete dobrado na fresta:\n\n“Ela não atravessou a porta sozinha.”',
-      'A prova definitiva de que a aluna foi apagada dos registros públicos!',
-      STORY_ILLUSTRATIONS.altered_ledger()
+      'A prova definitiva de que a aluna foi apagada dos registros públicos!'
     );
     this.addClue({
       id: 'clue_altered_ledger',
@@ -921,6 +1163,13 @@ class NoctariaGame {
   checkManuscriptFragments() {
     if (this.flags.fragment1Found && this.flags.fragment2Found && this.flags.fragment3Found) {
       this.showNotification('Todos os 3 fragmentos foram recolhidos! Vá até o Púlpito de Decifração.', 'quest');
+    }
+  }
+
+  checkPhase3Reagents() {
+    if (this.flags.ingredientLunarDew && this.flags.ingredientAshRoot && this.flags.ingredientNightPhoenix && this.flags.ingredientEther) {
+      this.updateQuestStep(1);
+      this.showNotification('✦ Todos os 4 reagentes foram reunidos! Aproxime-se do Caldeirão das Lembranças. ✦', 'quest');
     }
   }
 
@@ -1030,16 +1279,16 @@ class NoctariaGame {
           this.tempState.manuscriptOrder[2] === 'frag_c') {
         this.flags.manuscriptPuzzleSolved = true;
         this.flags.revelareLearned = true;
-        this.learnSpell('revelare');
+        this.learnSpell('revelare', false);
         this.updateQuestStep(2);
         this.closeModal();
         this.openInspectModal(
           '✦ Feitiço REVELARE Aprendido! ✦',
-          'As palavras arcanas ressoam na sua mente em harmonia perfeita:\n\n“Quando as sombras cobrirem os olhos dos mundanos, rasgue o véu das pedras com a palavra ancestral e o que foi apagado clamará em luz violeta: REVELARE.”\n\nAgora você pode ativar o feitiço REVELARE na barra inferior a qualquer momento para expor runas invisíveis e passagens seladas!',
+          'As palavras arcanas ressoam na sua mente em harmonia perfeita:\n\n"Quando as sombras cobrirem os olhos dos mundanos, rasgue o véu das pedras com a palavra ancestral e o que foi apagado clamará em luz violeta: REVELARE."\n\nAgora você pode ativar o feitiço REVELARE na barra inferior a qualquer momento para expor runas invisíveis e passagens seladas!',
           'O Laboratório de Alquimia foi destrancado!',
-          STORY_ILLUSTRATIONS.spell_revelare()
+          null,
+          () => this.completeCurrentPhase()
         );
-        this.completeCurrentPhase();
       } else {
         alert('A sequência rúnica emitiu fumaça negra... Os versos não se encaixam harmoniosamente. Tente novamente!');
         document.getElementById('btn-manuscript-reset').click();
@@ -1065,8 +1314,7 @@ class NoctariaGame {
       this.openInspectModal(
         'Poção da Lembrança Pronta',
         'O elixir brilha com uma tonalidade azul-cobalto luminescente. A poção já foi destilada com sucesso!',
-        'A visão sobre Seraphine e a Chave Dimensional já foi gravada em seu diário.',
-        STORY_ILLUSTRATIONS.memory_potion()
+        'A visão sobre Seraphine e a Chave Dimensional já foi gravada em seu diário.'
       );
       return;
     }
@@ -1159,6 +1407,7 @@ class NoctariaGame {
           id: 'memory_potion',
           name: 'Poção da Lembrança Destilada',
           icon: '🧪',
+          image: '/assets/images/objects/potion.jpg',
           description: 'Um elixir brilhante capaz de reacender memórias que foram apagadas do tecido do tempo.'
         });
         this.updateQuestStep(2);
@@ -1218,9 +1467,9 @@ class NoctariaGame {
       'Visão de Memória Recuperada',
       text,
       'Fase 3 Concluída! Agora você precisa confrontar Elias no Dormitório da Noite.',
-      STORY_ILLUSTRATIONS.memory_potion()
+      null,
+      () => this.completeCurrentPhase()
     );
-    this.completeCurrentPhase();
   }
 
   // --- FASE 4: O SEGREDO DE ELIAS ---
@@ -1231,6 +1480,7 @@ class NoctariaGame {
         id: 'crowe_chest_key',
         name: 'Chave de Ferro da Família Crowe',
         icon: '🗝',
+        image: '/assets/images/objects/key.jpg',
         description: 'Uma chave de ferro antiga ornamentada com o símbolo de um corvo pousado sobre uma fechadura.'
       });
       this.updateQuestStep(0);
@@ -1256,6 +1506,7 @@ class NoctariaGame {
         id: 'elias_diary',
         name: 'Diário Secreto dos Crowe',
         icon: '🕮',
+        image: '/assets/images/objects/diary.jpg',
         description: 'Registros confessionais da família Crowe sobre as Mil Portas e o ritual proibido.'
       });
       this.addClue({
@@ -1269,8 +1520,7 @@ class NoctariaGame {
       this.openInspectModal(
         'Diário Secreto da Linhagem Crowe',
         'Você abre o pesado baú de ferro e encontra o diário de couro gasto de Elias:\n\n“A Diretora Morgana planeja consumir a memória de mais sete estudantes para manter a galeria estável. Seraphine me implorou para esconder a Chave de Ébano. Se ela for capturada, caberá a mim entregar a chave àquele que carregar a carta das treze estrelas.”',
-        'Você agora possui a prova necessária para conversar com Elias!',
-        STORY_ILLUSTRATIONS.crowe_diary()
+        'Você agora possui a prova necessária para conversar com Elias!'
       );
       this.renderSceneInteractiveElements();
     } else {
@@ -1380,11 +1630,11 @@ class NoctariaGame {
         this.closeModal();
         this.openInspectModal(
           '✦ Gravação Mágica Manifestada! ✦',
-          'Um espectro prateado se ergue do espelho trincado:\n\nA figura jovem da Diretora Morgana Vale entoa o cântico proibido enquanto almas de alunos se dissipam em fumaça violeta. Ela diz:\n\n“Que o sacrifício mantenha o limiar fechado. Que ninguém nunca saiba o que repousa do outro lado.”\n\nCom o alinhamento, o Segundo Fragmento de Chave caiu sobre o pedestal!',
+          'Um espectro prateado se ergue do espelho trincado:\n\nA figura jovem da Diretora Morgana Vale entoa o cântico proibido enquanto almas de alunos se dissipam em fumaça violeta. Ela diz:\n\n"Que o sacrifício mantenha o limiar fechado. Que ninguém nunca saiba o que repousa do outro lado."\n\nCom o alinhamento, o Segundo Fragmento de Chave caiu sobre o pedestal!',
           'A Galeria das Mil Portas foi desbloqueada!',
-          STORY_ILLUSTRATIONS.morgana_mirror_spectral()
+          null,
+          () => this.completeCurrentPhase()
         );
-        this.completeCurrentPhase();
       } else {
         alert('Os retratos vibraram em vermelho... A ordem histórica está incorreta! Lembre-se de organizar do ano mais antigo para o mais recente.');
         document.getElementById('btn-portrait-reset').click();
@@ -1410,13 +1660,16 @@ class NoctariaGame {
 
   // --- FASE 6: GALERIA DAS MIL PORTAS ---
   inspectDimensionalDoor(door) {
+    if (!this.flags.doorsExamined) {
+      this.flags.doorsExamined = { mirror: false, clock: false, stars: false, ashes: false, thorns: false };
+    }
+
     if (door.id === 'stars') {
       this.flags.doorsExamined.stars = true;
       this.openInspectModal(
         door.name,
         `${door.desc}\n\nSom ressonante: ${door.sound}\n\nA Chave de Ébano ressoa fervorosamente no seu bolso! Use o feitiço APERTURA para quebrar o selo da Porta das Estrelas!`,
-        'Esta é a porta que conduz à dimensão do Entretempo!',
-        STORY_ILLUSTRATIONS.star_pendant()
+        'Esta é a porta que conduz à dimensão do Entretempo!'
       );
     } else {
       this.flags.doorsExamined[door.id] = true;
@@ -1425,6 +1678,12 @@ class NoctariaGame {
         `${door.desc}\n\nSom emitido: ${door.sound}`,
         'As chaves em seu bolso permanecem frias. Esta porta leva a dimensões perigosas ou desabitadas.'
       );
+    }
+
+    const examinedCount = Object.values(this.flags.doorsExamined).filter(Boolean).length;
+    this.flags.examinedDoorsCount = examinedCount;
+    if (examinedCount >= 3) {
+      this.updateQuestStep(0);
     }
   }
 
@@ -1447,23 +1706,17 @@ class NoctariaGame {
     if (echoNumber === 1) {
       this.openInspectModal(
         'Eco Temporal 1: O Segredo do Ritual',
-        'O feitiço MEMORIA materializa o eco de Seraphine nos arquivos proibidos:\n\n“Eles mentiram para todos nós... A academia não é apenas um santuário de magia; é uma prisão construída sobre a garganta de uma criatura cósmica. O ritual das treze badaladas precisa das nossas memórias como alimento!”',
-        'Fragmento de memória restaurado.',
-        STORY_ILLUSTRATIONS.timeless_echo()
+        'O feitiço MEMORIA materializa o eco de Seraphine nos arquivos proibidos:\n\n“Eles mentiram para todos nós... A academia não é apenas um santuário de magia; é uma prisão construída sobre a garganta de uma criatura cósmica. O ritual das treze badaladas precisa das nossas memórias como alimento!”'
       );
     } else if (echoNumber === 2) {
       this.openInspectModal(
         'Eco Temporal 2: A Traição de Morgana',
-        'O eco mostra a Diretora Morgana selando as portas:\n\n“Sinto muito, Seraphine. Você era a mais promissora. Mas se você revelar isso aos alunos, o pânico quebrará os pilares de contenção antes do solstício.”',
-        'Fragmento de memória restaurado.',
-        STORY_ILLUSTRATIONS.timeless_echo()
+        'O eco mostra a Diretora Morgana selando as portas:\n\n“Sinto muito, Seraphine. Você era a mais promissora. Mas se você revelar isso aos alunos, o pânico quebrará os pilares de contenção antes do solstício.”'
       );
     } else if (echoNumber === 3) {
       this.openInspectModal(
         'Eco Temporal 3: O Selamento de Seraphine',
-        'Seraphine grava sua última mensagem na carta antes de ser sugada pelo portal:\n\n“Não poderei voltar... mas deixarei a carta nos portões da entrada. Um dia, outro estudante com olhos atentos encontrará o caminho.”',
-        'Fragmento de memória restaurado.',
-        STORY_ILLUSTRATIONS.timeless_echo()
+        'Seraphine grava sua última mensagem na carta antes de ser sugada pelo portal:\n\n“Não poderei voltar... mas deixarei a carta nos portões da entrada. Um dia, outro estudante com olhos atentos encontrará o caminho.”'
       );
     }
 
@@ -1549,6 +1802,7 @@ class NoctariaGame {
 
       if (isMatch) {
         this.flags.thirteenChimesSolved = true;
+        this.updateQuestStep(2);
         this.closeModal();
         this.openFinalChoicesModal();
       } else {
@@ -1617,6 +1871,7 @@ class NoctariaGame {
   triggerEnding(endingType) {
     this.state.player.choices.endingChosen = endingType;
     this.flags.endingReached = true;
+    this.updateQuestStep(3);
     this.closeModal();
 
     let title = '';
@@ -1652,11 +1907,8 @@ class NoctariaGame {
     }
 
     const html = `
-      <div style="text-align:center; padding:10px 0;">
-        <div class="inspect-illustration-wrapper" style="max-height:220px; margin-bottom:16px;">
-          <img src="${STORY_ILLUSTRATIONS.ending_choice()}" alt="${title}" class="inspect-illustration-img" style="height:220px;" />
-          <div class="inspect-illustration-overlay"></div>
-        </div>
+      <div style="text-align:center; padding:16px 0;">
+        <div style="font-size:3.5rem; color:#4ef0c4; margin-bottom:12px;">✦ ✦ ✦</div>
         <h2 style="font-family:var(--font-title); font-size:1.8rem; color:#fff; margin-bottom:16px;">${title}</h2>
         <div style="background:rgba(8,12,29,0.85); border:1px solid var(--color-arcane-purple); padding:20px; border-radius:6px; max-width:680px; margin:0 auto 24px auto; text-align:left; line-height:1.8; color:var(--color-lunar-white); font-size:1.05rem;">
           ${cinematicText.replace(/\n\n/g, '<br><br>')}
@@ -1682,8 +1934,7 @@ class NoctariaGame {
     this.openInspectModal(
       'A Nova Carta sem Remetente',
       'A luz suave da alvorada entra pela janela do seu aposento em Noctária. Sobre a escrivaninha de mogno, uma nova carta de pergaminho negro repousa ao lado da vela apagada.\n\nO selo de cera violeta traz novamente o brasão de treze estrelas... Mas agora a inscrição em tinta prateada viva diz:\n\n“O limiar foi apenas o primeiro passo. As Mil Portas agora conhecem o seu reflexo. O que despertou do outro lado aguarda o seu chamado.”',
-      'Um convite para as fronteiras desconhecidas que existem além do mapa de Noctária.',
-      STORY_ILLUSTRATIONS.epilogue_letter()
+      'Um convite para as fronteiras desconhecidas que existem além do mapa de Noctária.'
     );
   }
 
@@ -1693,8 +1944,7 @@ class NoctariaGame {
     this.openInspectModal(
       'A Chave Prateada Impossível',
       'Uma chave forjada em prata cósmica, fria ao toque e incrivelmente leve. Suas ranhuras têm uma geometria tridimensional impossível que parece mudar de forma conforme a luz do amanhecer incide sobre ela.\n\nEla não se encaixa em nenhuma fechadura da academia existente na Terra...',
-      'Esta chave foi adicionada permanentemente às suas relíquias arcanas.',
-      STORY_ILLUSTRATIONS.epilogue_letter()
+      'Esta chave foi adicionada permanentemente às suas relíquias arcanas.'
     );
     this.addInventoryItem({
       id: 'impossible_silver_key',
@@ -1772,53 +2022,211 @@ class NoctariaGame {
     document.getElementById('summary-back-btn').onclick = () => this.closeModal();
   }
 
-  // --- MAPA E VIAGEM RÁPIDA ENTRE CENÁRIOS DESBLOQUEADOS ---
+  // --- MAPA INTERATIVO ARQUITETÔNICO & CARTOGRAFIA DE NOCTÁRIA ---
   openMapModal() {
     const scenes = this.state.unlockedScenes;
     const chapters = Object.values(PHASES_CONFIG);
+    const currentScene = this.state.currentScene || 'courtyard';
+    const currentPhaseCfg = Object.values(PHASES_CONFIG).find(p => p.scene === currentScene) || PHASES_CONFIG.prologue;
+    const activeQuest = this.state.activeQuest;
+
+    // Identify current quest destination phase
+    const questPhaseCfg = PHASES_CONFIG[this.state.currentChapter] || currentPhaseCfg;
+
+    // Default selected preview on map
+    let selectedChapter = questPhaseCfg || currentPhaseCfg;
 
     const html = `
-      <div>
-        <p style="color:var(--color-text-dim); margin-bottom:14px; font-style:italic;">
-          Consulte as alas e dimensões de Noctária exploradas durante a sua jornada. Você pode se deslocar livremente entre qualquer cenário destrancado.
-        </p>
-        <div class="map-locations-grid">
-          ${chapters.map(ch => {
-            const isUnlocked = scenes.includes(ch.scene);
-            const isCurrent = this.state.currentScene === ch.scene;
-            const bgFn = SCENE_BACKGROUNDS[ch.scene];
-            const thumbUrl = bgFn ? bgFn() : '';
-            return `
-              <div class="map-card ${isUnlocked ? '' : 'locked'} ${isCurrent ? 'current' : ''}" data-scene="${ch.scene}" data-chapter="${ch.id}">
-                ${thumbUrl ? `
-                  <div class="map-card-thumb-wrapper">
-                    <img src="${thumbUrl}" alt="${ch.locationName}" class="map-card-thumb-img" />
-                    <div class="map-card-thumb-overlay"></div>
-                  </div>
-                ` : ''}
-                <div class="map-card-body">
-                  <div class="map-card-phase">${ch.title.split('—')[0]}</div>
-                  <div class="map-card-name">${ch.locationName}</div>
-                  <div style="font-size:0.75rem; color:${isCurrent ? '#4ef0c4' : (isUnlocked ? 'var(--color-text-dim)' : '#ff6b6b')};">
-                    ${isCurrent ? '● Localização Atual' : (isUnlocked ? '✦ Clique para Viajar' : '🔒 Bloqueado nesta fase')}
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
+      <div class="gothic-map-interface">
+        <!-- Map header with compass & lore -->
+        <div class="map-top-legend">
+          <div class="map-legend-item"><span class="legend-dot dot-current"></span> Setor Atual</div>
+          <div class="map-legend-item"><span class="legend-dot dot-quest"></span> Objetivo Ativo</div>
+          <div class="map-legend-item"><span class="legend-dot dot-unlocked"></span> Ala Desbloqueada</div>
+          <div class="map-legend-item"><span class="legend-dot dot-locked"></span> Selo Dimensional Ativo</div>
+          <div class="map-compass-symbol">✦ NOCTÁRIA • SÉCULO XIX ✦</div>
+        </div>
+
+        <div class="map-split-view">
+          <!-- Interactive Map Canvas / Blueprint Stage -->
+          <div class="map-viewport-stage" id="map-viewport-stage">
+            <!-- Architectural Background Texture -->
+            <div class="map-blueprint-grid"></div>
+            
+            <!-- Noctaria Academy Castle Silhouette & Path Network -->
+            <svg class="map-connections-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <!-- Connecting Ley Lines -->
+              <line x1="18" y1="78" x2="38" y2="68" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="38" y1="68" x2="58" y2="62" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="38" y1="68" x2="25" y2="46" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="58" y1="62" x2="42" y2="44" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="42" y1="44" x2="74" y2="48" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="74" y1="48" x2="50" y2="30" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="50" y1="30" x2="70" y2="20" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="70" y1="20" x2="50" y2="12" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+              <line x1="50" y1="12" x2="84" y2="80" stroke="rgba(165,138,232,0.4)" stroke-width="1.2" stroke-dasharray="2 2" />
+            </svg>
+
+            <!-- Map Location Nodes -->
+            <div class="map-nodes-layer">
+              ${chapters.map(ch => {
+                const isUnlocked = scenes.includes(ch.scene);
+                const isCurrent = currentScene === ch.scene;
+                const isQuestTarget = questPhaseCfg && questPhaseCfg.id === ch.id;
+                const coords = ch.coordinates || { x: 50, y: 50 };
+                const bgGen = SCENE_BACKGROUNDS[ch.scene] || SCENE_BACKGROUNDS.courtyard;
+                const pinImg = bgGen();
+                const iconLabel = isCurrent ? '✦' : (isUnlocked ? String(ch.number + 1) : '🔒');
+                return `
+                  <button class="map-node-pin ${isUnlocked ? 'is-open' : 'is-sealed'} ${isCurrent ? 'is-active' : ''} ${isQuestTarget ? 'is-quest-target' : ''}" 
+                          style="left:${coords.x}%; top:${coords.y}%;"
+                          data-chapter-id="${ch.id}"
+                          data-scene-id="${ch.scene}"
+                          title="${ch.locationName}">
+                    <div class="pin-halo"></div>
+                    ${isQuestTarget ? `<span class="pin-quest-badge" title="Objetivo da Missão Atual">✦ Missão</span>` : ''}
+                    <div class="pin-thumb-preview" style="background-image: url('${pinImg}');">
+                      <div class="pin-core-overlay">${iconLabel}</div>
+                    </div>
+                    <span class="pin-hover-tooltip">
+                      <span class="tooltip-num">Fase ${ch.number} ${isQuestTarget ? '• Missão Ativa' : ''}</span>
+                      <span class="tooltip-name">${ch.locationName}</span>
+                      <span class="tooltip-status">${isCurrent ? '(Você está aqui)' : (isUnlocked ? 'Clique para inspecionar / viajar' : 'Bloqueado')}</span>
+                    </span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Location Inspector & Fast Travel Details Panel -->
+          <div class="map-details-sidebar" id="map-details-sidebar">
+            <div class="map-preview-card" id="map-preview-card">
+              <!-- Dynamically populated by updateMapPreview() -->
+            </div>
+          </div>
         </div>
       </div>
     `;
 
-    this.openModal('Mapa dos Portais de Noctária', html);
+    this.openModal('Cartografia & Portais Arcanos de Noctária', html);
 
-    document.querySelectorAll('.map-card:not(.locked)').forEach(card => {
-      card.onclick = () => {
-        const sc = card.getAttribute('data-scene');
-        const ch = card.getAttribute('data-chapter');
-        this.closeModal();
-        this.changeScene(sc);
-        this.showNotification(`Você viajou para: ${PHASES_CONFIG[ch].locationName}`, 'info');
+    const updateMapPreview = (chapter) => {
+      selectedChapter = chapter;
+      const isUnlocked = scenes.includes(chapter.scene);
+      const isCurrent = currentScene === chapter.scene;
+      const isQuestTarget = questPhaseCfg && questPhaseCfg.id === chapter.id;
+      const bgGenerator = SCENE_BACKGROUNDS[chapter.scene] || SCENE_BACKGROUNDS.courtyard;
+      const previewBg = bgGenerator();
+
+      const previewContainer = document.getElementById('map-preview-card');
+      if (!previewContainer) return;
+
+      previewContainer.innerHTML = `
+        <div class="preview-thumbnail" style="background-image: url('${previewBg}');">
+          <div class="preview-badge-status ${isCurrent ? 'status-current' : (isUnlocked ? 'status-open' : 'status-locked')}">
+            ${isCurrent ? '● Localização Atual' : (isUnlocked ? '✓ Acesso Liberado' : '🔒 Selado Nesta Fase')}
+          </div>
+          ${isQuestTarget ? `<div class="preview-badge-quest">✦ Alvo da Missão</div>` : ''}
+          <span class="preview-category">${chapter.category || 'Ala Arcana'}</span>
+        </div>
+
+        <div class="preview-body">
+          <span class="preview-phase-tag">${chapter.title}</span>
+          <h3 class="preview-title">${chapter.locationName}</h3>
+          
+          <div class="preview-atmosphere">
+            <strong>Atmosfera do Local:</strong>
+            <p>“${chapter.atmosphere}”</p>
+          </div>
+
+          <p class="preview-description">${chapter.description}</p>
+
+          ${!isUnlocked ? `
+            <div class="preview-lock-box">
+              <div class="lock-box-header">
+                <span class="lock-icon">🔒</span>
+                <strong>Motivo do Bloqueio:</strong>
+              </div>
+              <p class="lock-reason-text">${chapter.lockReason || 'O selo dimensional desta ala responde apenas ao progresso dos mistérios de Noctária.'}</p>
+              <div class="lock-requirement-note">
+                <strong>Como desbloquear:</strong> ${chapter.unlockRequirement || 'Conclua os enigmas da fase anterior.'}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="preview-clues-section">
+            <span class="preview-clues-title">✦ Pontos Notáveis & Pistas:</span>
+            <ul class="preview-clues-list">
+              ${(chapter.cluesHere || ['Segredos ocultos sob as sombras']).map(c => `<li>${c}</li>`).join('')}
+            </ul>
+          </div>
+
+          <div class="preview-actions">
+            ${isCurrent ? `
+              <button class="btn-gothic btn-disabled" disabled style="width:100%;">
+                <span>Você já está nesta ala</span>
+              </button>
+            ` : isUnlocked ? `
+              <button class="btn-gothic btn-primary" id="btn-travel-confirm" style="width:100%;">
+                <span>✦ Viajar para esta Ala</span>
+              </button>
+            ` : `
+              <button class="btn-gothic btn-locked" id="btn-travel-locked" style="width:100%;">
+                <span>🔒 Acesso Bloqueado</span>
+              </button>
+            `}
+            <button class="btn-gothic btn-subtle" id="btn-map-close-footer" style="width:100%; margin-top:8px;">
+              <span>Fechar Mapa</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      const travelBtn = document.getElementById('btn-travel-confirm');
+      if (travelBtn) {
+        travelBtn.onclick = () => {
+          this.closeModal();
+          this.changeScene(chapter.scene);
+          this.showNotification(`Transição dimensional: Você adentrou ${chapter.locationName}`, 'info');
+        };
+      }
+
+      const lockedBtn = document.getElementById('btn-travel-locked');
+      if (lockedBtn) {
+        lockedBtn.onclick = () => {
+          this.showNotification(`⚠️ ${chapter.locationName} está trancada: ${chapter.lockReason || 'Cumpra a missão correspondente para desbloquear.'}`, 'quest');
+        };
+      }
+
+      const closeMapBtn = document.getElementById('btn-map-close-footer');
+      if (closeMapBtn) {
+        closeMapBtn.onclick = () => this.closeModal();
+      }
+    };
+
+    // Initialize preview with active quest or current chapter
+    updateMapPreview(selectedChapter);
+
+    // Node click interactions: single click to preview, double click to travel if open
+    document.querySelectorAll('.map-node-pin').forEach(pin => {
+      const chId = pin.getAttribute('data-chapter-id');
+      const targetCh = PHASES_CONFIG[chId];
+
+      pin.onclick = () => {
+        if (targetCh) {
+          document.querySelectorAll('.map-node-pin').forEach(p => p.classList.remove('is-selected'));
+          pin.classList.add('is-selected');
+          updateMapPreview(targetCh);
+        }
+      };
+
+      pin.ondblclick = () => {
+        if (targetCh && scenes.includes(targetCh.scene) && currentScene !== targetCh.scene) {
+          this.closeModal();
+          this.changeScene(targetCh.scene);
+          this.showNotification(`Viagem rápida: ${targetCh.locationName}`, 'info');
+        }
       };
     });
   }
@@ -1853,8 +2261,9 @@ class NoctariaGame {
       }
     } else if (spellId === 'apertura') {
       if (this.state.currentScene === 'gallery_doors') {
-        if (this.flags.doorsExamined.stars) {
+        if (this.flags.doorsExamined && this.flags.doorsExamined.stars) {
           this.flags.correctStarDoorOpened = true;
+          this.updateQuestStep(2);
           this.saveGame();
           this.showNotification('🗝 APERTURA ressoa nas treze estrelas! O portal para o Entretempo se abre em um vórtice estelar! ✦', 'quest');
           this.completeCurrentPhase();
@@ -1899,28 +2308,55 @@ class NoctariaGame {
     if (!existingOverlay) {
       existingOverlay = document.createElement('div');
       existingOverlay.id = 'dialogue-overlay';
-      existingOverlay.className = 'dialogue-overlay';
+      existingOverlay.className = 'dialogue-overlay vn-dialogue-frame';
       this.root.appendChild(existingOverlay);
     }
 
     existingOverlay.innerHTML = `
+      <!-- Character Stance Column with Gothic Arch Filigree -->
       <div class="dialogue-portrait-col">
-        <div class="portrait-wrapper">
-          ${character.image ? `<img src="${character.image}" alt="${character.name}" class="portrait-art">` : character.avatarSvg}
+        <div class="portrait-arch-frame">
+          <div class="portrait-wrapper">
+            ${character.image ? `<img src="${character.image}" alt="${character.name}" class="portrait-art">` : character.avatarSvg}
+          </div>
+          <div class="portrait-runic-glow"></div>
         </div>
-        <div class="speaker-title">${character.title}</div>
+        <div class="speaker-role-card">
+          <span class="speaker-role-tag">${character.title}</span>
+          <span class="speaker-affinity-tag">Afinidade: +${this.state.player.relationships[character.id] || 0}</span>
+        </div>
       </div>
+
+      <!-- Dialogue Content Box -->
       <div class="dialogue-content-col">
-        <div>
-          <h3 class="speaker-name">${character.name}</h3>
-          <p class="dialogue-text" id="dialogue-text-body"></p>
+        <div class="dialogue-header-bar">
+          <div class="speaker-badge-title">
+            <span class="speaker-ornament">✧</span>
+            <h3 class="speaker-name">${character.name}</h3>
+            <span class="speaker-ornament">✧</span>
+          </div>
+          <div class="dialogue-skip-hint">Clique no texto para pular digitação</div>
         </div>
-        <div class="dialogue-options" id="dialogue-options-list"></div>
+
+        <div class="dialogue-body-area">
+          <p class="dialogue-text" id="dialogue-text-body"></p>
+          <div class="dialogue-continuation-cursor" id="dialogue-cursor" style="display:none;">▼</div>
+        </div>
+
+        <!-- Choice Options -->
+        <div class="dialogue-options-wrapper">
+          <div class="dialogue-options-label" id="dialogue-options-header" style="display:none;">
+            ✦ Respostas & Decisões Disponíveis:
+          </div>
+          <div class="dialogue-options" id="dialogue-options-list"></div>
+        </div>
       </div>
     `;
 
     const textEl = document.getElementById('dialogue-text-body');
     const optionsContainer = document.getElementById('dialogue-options-list');
+    const optionsHeader = document.getElementById('dialogue-options-header');
+    const cursorEl = document.getElementById('dialogue-cursor');
 
     if (this.textRevealInterval) clearInterval(this.textRevealInterval);
     const fullText = node.text;
@@ -1928,21 +2364,33 @@ class NoctariaGame {
     textEl.innerText = '';
 
     const showOptions = () => {
+      if (cursorEl) cursorEl.style.display = 'block';
+      if (optionsHeader) optionsHeader.style.display = 'block';
       optionsContainer.innerHTML = '';
+
       if (node.isEnd) {
         const closeBtn = document.createElement('button');
-        closeBtn.className = 'dialogue-opt-btn';
-        closeBtn.innerHTML = `<span class="dialogue-opt-marker">✦</span> Continuar jornada`;
+        closeBtn.className = 'dialogue-opt-btn opt-continue-btn';
+        closeBtn.innerHTML = `
+          <span class="dialogue-opt-marker">✦</span>
+          <span class="opt-label-text">Prosseguir com a investigação</span>
+          <span class="opt-arrow">⟶</span>
+        `;
         closeBtn.onclick = () => {
           if (node.onComplete) node.onComplete(this);
-          existingOverlay.remove();
+          existingOverlay.classList.add('dialogue-slide-down');
+          setTimeout(() => existingOverlay.remove(), 250);
         };
         optionsContainer.appendChild(closeBtn);
       } else {
         availableOptions.forEach((opt, idx) => {
           const btn = document.createElement('button');
           btn.className = 'dialogue-opt-btn';
-          btn.innerHTML = `<span class="dialogue-opt-marker">${String.fromCharCode(65 + idx)}.</span> ${opt.text}`;
+          btn.innerHTML = `
+            <span class="dialogue-opt-marker">${String.fromCharCode(65 + idx)}.</span>
+            <span class="opt-label-text">${opt.text}</span>
+            <span class="opt-arrow">⟶</span>
+          `;
           btn.onclick = () => {
             if (opt.effect) opt.effect(this.state);
             this.saveGame();
@@ -1959,6 +2407,7 @@ class NoctariaGame {
       textEl.innerText = fullText;
       showOptions();
     } else {
+      const speedDelay = this.state.settings.textSpeed === 'fast' ? 8 : 16;
       this.textRevealInterval = setInterval(() => {
         if (charIndex < fullText.length) {
           textEl.innerText += fullText[charIndex];
@@ -1967,12 +2416,15 @@ class NoctariaGame {
           clearInterval(this.textRevealInterval);
           showOptions();
         }
-      }, 16);
+      }, speedDelay);
 
-      textEl.onclick = () => {
-        clearInterval(this.textRevealInterval);
-        textEl.innerText = fullText;
-        showOptions();
+      existingOverlay.onclick = (e) => {
+        if (e.target.closest('button')) return;
+        if (charIndex < fullText.length) {
+          clearInterval(this.textRevealInterval);
+          textEl.innerText = fullText;
+          showOptions();
+        }
       };
     }
   }
@@ -2130,7 +2582,13 @@ class NoctariaGame {
         ${items.length === 0 ? '<p style="color:var(--color-text-dim); font-style:italic; grid-column:1/-1;">Sua bolsa de iniciado está vazia no momento.</p>' : ''}
         ${items.map(item => `
           <div class="inventory-card" data-item-id="${item.id}">
-            <div class="item-icon">${item.icon}</div>
+            ${item.image ? `
+              <div class="item-image-thumb">
+                <img src="${item.image}" alt="${item.name}">
+              </div>
+            ` : `
+              <div class="item-icon">${item.icon}</div>
+            `}
             <div class="item-name">${item.name}</div>
             <div class="item-desc">${item.description}</div>
           </div>
@@ -2144,32 +2602,35 @@ class NoctariaGame {
         const id = card.getAttribute('data-item-id');
         const item = items.find(i => i.id === id);
         if (item) {
-          this.openInspectModal(item.name, item.description, 'Item catalogado no inventário do jogador.');
+          this.openInspectModal(item.name, item.description, 'Item catalogado no inventário do jogador.', item.image || null);
         }
       };
     });
   }
 
-  openInspectModal(title, text, subtext = '', illustration = null) {
+  openInspectModal(title, text, subtext = '', imageUrl = null, onClose = null) {
     const html = `
-      <div class="inspect-modal-content">
-        ${illustration ? `
-          <div class="inspect-illustration-wrapper">
-            <img src="${illustration}" alt="${title}" class="inspect-illustration-img" />
-            <div class="inspect-illustration-overlay"></div>
+      <div class="inspect-modal-layout ${imageUrl ? 'has-inspect-image' : ''}">
+        ${imageUrl ? `
+          <div class="inspect-image-wrapper">
+            <img src="${imageUrl}" alt="${title}" class="inspect-object-image">
+            <div class="inspect-image-frame-glow"></div>
           </div>
         ` : ''}
-        <div class="letter-parchment">
+        <div class="letter-parchment inspect-text-wrapper">
           <p style="margin-bottom:14px; white-space:pre-line;">${text}</p>
           ${subtext ? `<p style="font-size:0.9rem; color:var(--color-aged-silver); border-top:1px dashed rgba(183,183,200,0.3); padding-top:10px;">${subtext}</p>` : ''}
         </div>
-        <div style="margin-top:20px; text-align:right;">
-          <button class="btn-gothic btn-primary" id="inspect-back-btn" style="display:inline-flex;">Fechar</button>
-        </div>
+      </div>
+      <div style="margin-top:20px; text-align:right;">
+        <button class="btn-gothic" id="inspect-back-btn" style="display:inline-flex;">Fechar</button>
       </div>
     `;
     this.openModal(title, html);
-    document.getElementById('inspect-back-btn').onclick = () => this.closeModal();
+    document.getElementById('inspect-back-btn').onclick = () => {
+      this.closeModal();
+      if (typeof onClose === 'function') onClose();
+    };
   }
 
   openQuestCompletionModal(questName, summary, nextChapterId = null) {
@@ -2183,18 +2644,9 @@ class NoctariaGame {
           ${summary}
         </p>
         ${nextCfg ? `
-          <div style="background:rgba(8,12,29,0.7); border:1px solid var(--color-arcane-purple); border-radius:6px; max-width:540px; margin:0 auto 24px auto; overflow:hidden;">
-            ${SCENE_BACKGROUNDS[nextCfg.scene] ? `
-              <div style="width:100%; height:160px; overflow:hidden; position:relative;">
-                <img src="${SCENE_BACKGROUNDS[nextCfg.scene]()}" alt="${nextCfg.title}" style="width:100%; height:100%; object-fit:cover;" />
-                <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(8,12,29,0.95) 100%);"></div>
-              </div>
-            ` : ''}
-            <div style="padding:14px 18px; text-align:left;">
-              <span style="color:var(--color-luminous-purple); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.15em; font-family:var(--font-title);">PRÓXIMO CAPÍTULO DESBLOQUEADO</span>
-              <p style="color:#fff; font-family:var(--font-title); font-size:1.15rem; margin-top:4px;">${nextCfg.title}</p>
-              <p style="color:var(--color-text-dim); font-size:0.9rem; margin-top:4px;">${nextCfg.description}</p>
-            </div>
+          <div style="background:rgba(8,12,29,0.7); border:1px solid var(--color-arcane-purple); padding:14px; border-radius:4px; max-width:480px; margin:0 auto 24px auto;">
+            <span style="color:var(--color-aged-silver); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.1em;">PRÓXIMA ETAPA DESBLOQUEADA</span>
+            <p style="color:#fff; font-family:var(--font-title); font-size:1.15rem; margin-top:4px;">${nextCfg.title}</p>
           </div>
         ` : ''}
         <button class="btn-gothic btn-primary" id="quest-congrats-btn" style="margin:0 auto; display:inline-flex;">
@@ -2205,9 +2657,9 @@ class NoctariaGame {
     this.openModal('Progresso Narrativo', html);
     document.getElementById('quest-congrats-btn').onclick = () => {
       this.closeModal();
-      if (nextChapterId) {
-        this.changeChapter(nextChapterId);
-      }
+      // O estado já foi actualizado em completeCurrentPhase().
+      // Apenas re-renderizamos o mundo para reflectir o novo capítulo.
+      this.renderGameWorld();
     };
   }
 

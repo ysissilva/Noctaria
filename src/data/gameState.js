@@ -100,7 +100,13 @@ export const PHASES_CONFIG = {
     title: 'Prólogo — A Carta sem Remetente',
     scene: 'courtyard',
     locationName: 'Pátio dos Portões da Noite',
-    description: 'Uma carta sem remetente traz o protagonista à monumental Academia de Noctária.'
+    category: 'Entrada Principal',
+    coordinates: { x: 18, y: 78 },
+    atmosphere: 'Névoa gélida, gárgulas em vigília e o farfalhar de corvos sob a lua crescente.',
+    description: 'Os portões de ferro forjado de Noctária abrem-se sob a chuva cinzenta. Uma carta sem remetente selada por treze estrelas trouxe você até aqui.',
+    cluesHere: ['Carta Caída na Escadaria', 'Porta Fantasma das Treze Badaladas'],
+    lockReason: 'Aberto desde o início da jornada.',
+    unlockRequirement: 'Ponto de partida do Iniciado.'
   },
   phase_1: {
     id: 'phase_1',
@@ -108,7 +114,13 @@ export const PHASES_CONFIG = {
     title: 'Fase 1 — O Nome que Não Existe',
     scene: 'ashes_hall',
     locationName: 'Salão das Cinzas • Ala Central',
-    description: 'Seraphine Ashford foi apagada dos registros da academia. Investigue o mural e o retrato adulterado.'
+    category: 'Ala Central',
+    coordinates: { x: 38, y: 68 },
+    atmosphere: 'Vitrais violetas projetam sombras afiadas sobre o piso de mármore e o relógio astronômico.',
+    description: 'O grande vestíbulo central da academia. Murais estudantis e arquivos oficiais revelam um mistério sombrio: o nome de Seraphine Ashford foi violentamente raspado de todos os registros.',
+    cluesHere: ['Retrato Raspado', 'Livro de Matrículas Alterado', 'Aviso Estudantil Apagado'],
+    lockReason: 'Os portões internos do saguão exigem presenciar o soar do sino misterioso.',
+    unlockRequirement: 'Conclua o Prólogo: fale com Elias, leia a carta caída e presencie o sino de 13 badaladas.'
   },
   phase_2: {
     id: 'phase_2',
@@ -116,7 +128,13 @@ export const PHASES_CONFIG = {
     title: 'Fase 2 — A Biblioteca Velada',
     scene: 'library',
     locationName: 'A Biblioteca Velada • Arquivo Restrito',
-    description: 'Decifre manuscritos com símbolos arcanos mutáveis para descobrir o primeiro feitiço: Revelare.'
+    category: 'Arquivo Restrito',
+    coordinates: { x: 58, y: 62 },
+    atmosphere: 'Estantes infinitas que desafiam a gravidade e o sussurro constante de páginas vivas.',
+    description: 'Guarnecida pela enigmática Madam Vespera, a biblioteca oculta manuscritos ancestrais e a fórmula do feitiço Revelare, essencial para enxergar o que o véu esconde.',
+    cluesHere: ['Fragmentos A, B e C do Manuscrito', 'Inscrição de Revelare'],
+    lockReason: 'As portas dos arquivos estão trancadas por selos de esquecimento.',
+    unlockRequirement: 'Conclua a Fase 1: confirme com Elias que Seraphine Ashford foi apagada dos registros.'
   },
   phase_3: {
     id: 'phase_3',
@@ -124,15 +142,27 @@ export const PHASES_CONFIG = {
     title: 'Fase 3 — A Poção da Lembrança',
     scene: 'alchemy_lab',
     locationName: 'Laboratório de Alquimia das Sombras',
-    description: 'Ajude o Prof. Octavian a colher ingredientes e destilar a poção capaz de quebrar o esquecimento.'
+    category: 'Cripta Subterrânea',
+    coordinates: { x: 42, y: 44 },
+    atmosphere: 'Vapores luminescentes verdes e azuis borbulham em retortas de vidro alquímico.',
+    description: 'Sob a supervisão do Prof. Octavian e de Celeste Veyra, você deve recolher quatro ingredientes raros e destilar o elixir capaz de romper as barreiras do esquecimento mental.',
+    cluesHere: ['Fórmula do Elixir da Lembrança', 'Orvalho Lunar', 'Cinza de Fênix'],
+    lockReason: 'A cripta alquímica está selada por barreira mágica que oculta a maçaneta.',
+    unlockRequirement: 'Conclua a Fase 2: decifre o manuscrito na biblioteca e domine o feitiço REVELARE.'
   },
   phase_4: {
     id: 'phase_4',
     number: 4,
     title: 'Fase 4 — O Segredo de Elias',
     scene: 'dormitory',
-    locationName: 'Dormitório da Noite & Pátio Interno',
-    description: 'Descubra a verdade sobre a linhagem de Elias Crowe e obtenha a Primeira Chave Dimensional.'
+    locationName: 'Dormitório da Noite e Pátio Interno',
+    category: 'Alas Residenciais',
+    coordinates: { x: 25, y: 46 },
+    atmosphere: 'Chamas crepitam na lareira de pedra enquanto a chuva fustiga as janelas em arco ogival.',
+    description: 'A linhagem de Elias Crowe esteve ligada à fundação de Noctária. Nos aposentos antigos repousa a chave da lareira e a Primeira Chave Dimensional.',
+    cluesHere: ['Diário de Elias Crowe', 'Chave da Lareira', 'Primeira Chave Dimensional'],
+    lockReason: 'Os aposentos dos veteranos estão fechados para novatos sem pistas sólidas.',
+    unlockRequirement: 'Conclua a Fase 3: destile e consuma a Poção da Lembrança no caldeirão das sombras.'
   },
   phase_5: {
     id: 'phase_5',
@@ -140,7 +170,13 @@ export const PHASES_CONFIG = {
     title: 'Fase 5 — A Ala Lacrada',
     scene: 'sealed_wing',
     locationName: 'A Ala Lacrada • Mansão Primitiva',
-    description: 'Desarme armadilhas rúnicas, ordene os retratos cronológicos e recupere o segundo fragmento de chave.'
+    category: 'Ala Proibida',
+    coordinates: { x: 74, y: 48 },
+    atmosphere: 'Tapeçarias rasgadas e runas estalando com perigo mortal na escuridão abandonada.',
+    description: 'Uma área interditada após o grande incêndio de 1899. Armadilhas arcanas e uma galeria cronológica de retratos guardam o Segundo Fragmento de Chave.',
+    cluesHere: ['Retratos Históricos (1842-1923)', 'Gravação Espectral de Morgana', 'Segundo Fragmento da Chave'],
+    lockReason: 'A entrada foi lacrada com ferrolhos rúnicos após o incêndio histórico.',
+    unlockRequirement: 'Conclua a Fase 4: obtenha a Primeira Chave Dimensional no baú de Elias Crowe e aprenda APERTURA.'
   },
   phase_6: {
     id: 'phase_6',
@@ -148,7 +184,13 @@ export const PHASES_CONFIG = {
     title: 'Fase 6 — A Galeria das Mil Portas',
     scene: 'gallery_doors',
     locationName: 'A Galeria Impossível das Mil Portas',
-    description: 'Examine cinco portais dimensionais e encontre a passagem estelar para o reino do Entretempo.'
+    category: 'Limiar Dimensional',
+    coordinates: { x: 50, y: 30 },
+    atmosphere: 'Portais flutuam suspensos sobre o abismo do Vazio, ressoando com ecos de outras realidades.',
+    description: 'O ponto de convergência de todos os caminhos. Cinco portas monumentais desafiam a lógica, mas apenas a Porta das Treze Estrelas conduz ao cativeiro de Seraphine.',
+    cluesHere: ['Pingente Estelar de Seraphine', 'Ressonância das Portas', 'Passagem para o Entretempo'],
+    lockReason: 'O limiar das portas impossíveis requer a união dos dois fragmentos de chave.',
+    unlockRequirement: 'Conclua a Fase 5: solucione os retratos históricos na Ala Lacrada e obtenha o Segundo Fragmento.'
   },
   phase_7: {
     id: 'phase_7',
@@ -156,7 +198,13 @@ export const PHASES_CONFIG = {
     title: 'Fase 7 — O Reino Onde o Tempo Parou',
     scene: 'timeless_realm',
     locationName: 'Dimensão do Entretempo • Ecos Congelados',
-    description: 'Reconstrua as 3 memórias com o feitiço Memoria e resgate Seraphine antes do colapso temporal.'
+    category: 'Plano Extradimensional',
+    coordinates: { x: 70, y: 20 },
+    atmosphere: 'Gotas de chuva e cacos de vidro suspensos no ar estático sob uma aurora violeta imutável.',
+    description: 'O tempo foi congelado nesta fenda do Vazio. Seraphine Ashford resiste em forma espectral enquanto você reconstrói os três ecos temporais com o feitiço Memoria.',
+    cluesHere: ['Ecos Temporais 1, 2 e 3', 'O Segredo das 13 Badaladas', 'Resgate de Seraphine'],
+    lockReason: 'Uma fenda temporal inacessível sem a abertura da Porta das Treze Estrelas.',
+    unlockRequirement: 'Conclua a Fase 6: encontre o Pingente de Seraphine e use APERTURA na Porta das Estrelas.'
   },
   phase_8: {
     id: 'phase_8',
@@ -164,7 +212,13 @@ export const PHASES_CONFIG = {
     title: 'Fase 8 — O Ritual das Treze Badaladas',
     scene: 'central_chamber',
     locationName: 'Câmara Central Subterrânea • Altar Cósmico',
-    description: 'Confronte a Diretora Morgana Vale, alinhe os 13 pêndulos e decida o destino final de Noctária.'
+    category: 'Coração de Noctária',
+    coordinates: { x: 50, y: 12 },
+    atmosphere: 'O Altar de Obsidiana pulsa com luz ultravioleta e 13 pêndulos astronômicos em sincronia.',
+    description: 'O confronto culminante com a Diretora Morgana Vale. O alinhamento dos pêndulos celestes selará para sempre o destino da academia e de todos os seus habitantes.',
+    cluesHere: ['Alinhamento dos 13 Pêndulos', 'Julgamento Final', 'O Destino de Noctária'],
+    lockReason: 'O santuário subterrâneo de Morgana só é alcançado resgatando Seraphine do Entretempo.',
+    unlockRequirement: 'Conclua a Fase 7: reconstrua os 3 ecos com MEMORIA e liberte Seraphine do congelamento temporal.'
   },
   epilogue: {
     id: 'epilogue',
@@ -172,7 +226,13 @@ export const PHASES_CONFIG = {
     title: 'Epílogo — O Outro Lado',
     scene: 'epilogue_room',
     locationName: 'Aposentos do Protagonista • Madrugada',
-    description: 'A calmaria após a tempestade traz uma nova carta inexplicável e uma chave para o além.'
+    category: 'Amanhecer em Noctária',
+    coordinates: { x: 84, y: 80 },
+    atmosphere: 'A aurora prateada clareia a bruma que repousa sobre as torres pontiagudas de pedra.',
+    description: 'Com a crise resolvida, a tranquilidade reina nas dependências da academia... até uma nova carta selada aparecer silenciosamente sobre a escrivaninha.',
+    cluesHere: ['Nova Carta Misteriosa', 'A Chave Impossível', 'Crônicas Finais'],
+    lockReason: 'Apenas aqueles que enfrentaram o ritual final despertam na manhã seguinte.',
+    unlockRequirement: 'Conclua a Fase 8: alinhe as treze badaladas no altar e decida o destino final de Noctária.'
   }
 };
 

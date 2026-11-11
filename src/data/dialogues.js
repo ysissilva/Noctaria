@@ -132,6 +132,7 @@ export const DIALOGUES = {
         isEnd: true,
         onComplete: (game) => {
           game.flags.phase1TalkedElias = true;
+          game.updateQuestStep(0);
         }
       },
       seraphine_whisper: {
@@ -147,6 +148,7 @@ export const DIALOGUES = {
         text: 'A passagem leste leva à Biblioteca Velada. A Bibliotecária Madam Vespera não responde a curiosos, mas se você mencionar o símbolo das treze estrelas, ela terá que deixá-lo passar.',
         isEnd: true,
         onComplete: (game) => {
+          game.updateQuestStep(4);
           game.completeCurrentPhase();
         }
       },
@@ -198,7 +200,7 @@ export const DIALOGUES = {
         ]
       },
       end_morgana: {
-        text: 'Não se atrase para o toque do toque de recolher.',
+        text: 'Não se atrase para o toque de recolher.',
         isEnd: true
       }
     }
@@ -211,11 +213,11 @@ export const DIALOGUES = {
     characterId: 'vespera',
     nodes: {
       start: {
-        text: 'Pise com leveza, novato. Os livros nesta ala respiram, e alguns não apreciam serem perturbados enquanto digerem a poeira dos séculos. O que procura no arquivo proibido?',
+        text: 'Pise com leveza, novato. Os tomos nesta ala respiram, e alguns não apreciam serem perturbados enquanto digerem a poeira dos séculos. O silêncio aqui é uma barreira de proteção. O que procura nos arquivos proibidos de Noctária?',
         options: [
           {
             text: 'Procuro informações sobre as Mil Portas e manuscritos de translocação.',
-            nextNode: 'torn_manuscript'
+            nextNode: 'doors_lore'
           },
           {
             text: 'Apresentar a carta com o símbolo de treze estrelas.',
@@ -223,20 +225,55 @@ export const DIALOGUES = {
             effect: (state) => {
               state.player.relationships.vespera += 2;
             }
+          },
+          {
+            text: 'Dizem que uma aluna chamada Seraphine pesquisava aqui antes de sumir.',
+            nextNode: 'seraphine_inquiry'
+          }
+        ]
+      },
+      doors_lore: {
+        text: 'As Mil Portas não são passagens comuns de madeira e ferro. São fendas abertas no tecido da realidade por rituais antigos dos fundadores. Quem as atravessa sem o domínio dos três feitiços capitais perde o retorno... ou a própria mente.',
+        options: [
+          {
+            text: 'Quais são esses feitiços capitais?',
+            nextNode: 'explain_three_spells'
+          },
+          {
+            text: 'Mostrar a carta com o selo das treze estrelas.',
+            nextNode: 'respect_emblem'
+          }
+        ]
+      },
+      seraphine_inquiry: {
+        text: 'Seraphine... Uma mente brilhante demais para as sombras que rondam a Diretoria. Ela passava noites em claro na mesa astronômica, traçando linhas entre as constelações e as portas seladas. Quando tentaram apagar seus passos, ela deixou algo para trás.',
+        options: [
+          {
+            text: 'O que ela deixou para trás?',
+            nextNode: 'torn_manuscript'
+          }
+        ]
+      },
+      explain_three_spells: {
+        text: 'REVELARE para enxergar o invisível e romper ilusões. APERTURA para quebrar fechos cósmicos. E MEMORIA para ancorar o tempo e impedir que sua essência se dissolva no vazio.',
+        options: [
+          {
+            text: 'Onde encontro o primeiro desses encantamentos?',
+            nextNode: 'torn_manuscript'
           }
         ]
       },
       respect_emblem: {
-        text: 'O brasão das treze estrelas... Fazia quase meio século que não via esse selo. Quem quer que tenha lhe enviado essa carta esperava que você encontrasse o Manuscrito das Três Fases.',
+        text: 'O brasão das treze estrelas... Fazia quase meio século que não via esse selo autêntico. Quem quer que tenha lhe enviado essa carta esperava que você encontrasse o Manuscrito das Três Fases e terminasse o que foi interrompido.',
         options: [
           {
-            text: 'Onde está o manuscrito?',
+            text: 'Onde está o manuscrito agora?',
             nextNode: 'torn_manuscript'
           }
         ]
       },
       torn_manuscript: {
-        text: 'Ele foi rasgado em três fragmentos quando a Ala Lacrada foi murada. Um pedaço repousa na mesa astronômica, outro entre os fólios de alquimia e o terceiro na gaveta do púlpito central. Reúna-os e decifre o feitiço primordial.',
+        text: 'Ele foi rasgado em três fragmentos quando a Ala Lacrada foi murada para conter o vazamento arcano. Um pedaço repousa na mesa astronômica, outro entre os fólios de alquimia e o terceiro na gaveta do púlpito central. Reúna-os com cautela e decifre o verso primordial.',
         options: [
           {
             text: 'Que feitiço está gravado nele?',
@@ -245,10 +282,11 @@ export const DIALOGUES = {
         ]
       },
       explain_revelare: {
-        text: 'O feitiço REVELARE. O encanto dos olhos verdadeiros. Ele quebra véus, revela passagens em paredes sólidas e faz o invisível arder em luz violeta.',
+        text: 'O feitiço REVELARE. O encanto dos olhos verdadeiros. Ele quebra véus, revela passagens em pedras aparentemente sólidas e faz o invisível arder em luz violeta. Sem ele, você jamais ultrapassará as barreiras do laboratório e da ala antiga.',
         isEnd: true,
         onComplete: (game) => {
           game.flags.vesperaTalked = true;
+          game.updateQuestStep(0);
           game.showNotification('Explore a Biblioteca para encontrar os 3 fragmentos do manuscrito!', 'quest');
         }
       }
@@ -300,6 +338,7 @@ export const DIALOGUES = {
         isEnd: true,
         onComplete: (game) => {
           game.flags.octavianTalked = true;
+          game.updateQuestStep(0);
           game.showNotification('Converse com Celeste Veyra para preparar a Poção da Lembrança.', 'quest');
         }
       }
@@ -403,6 +442,10 @@ export const DIALOGUES = {
         text: 'A passagem para a Ala Lacrada está na parede norte do saguão. Tome cuidado com os retratos da galeria abandonada... Eles têm memória própria.',
         isEnd: true,
         onComplete: (game) => {
+          game.flags.firstDimensionalKeyObtained = true;
+          game.flags.aperturaLearned = true;
+          game.learnSpell('apertura');
+          game.updateQuestStep(2);
           game.completeCurrentPhase();
         }
       }
@@ -454,6 +497,7 @@ export const DIALOGUES = {
         isEnd: true,
         onComplete: (game) => {
           game.flags.seraphineRescued = true;
+          game.updateQuestStep(3);
           game.showNotification('✦ Use o feitiço MEMORIA nos três fragmentos temporais para libertar Seraphine! ✦', 'quest');
         }
       }
@@ -507,7 +551,142 @@ export const DIALOGUES = {
         text: 'O Altar das Treze Badaladas está diante de você. Os pêndulos rúnicos aguardam a frequência correta: 1, 3, 7 e 13. Uma vez alinhados, a decisão sobre o futuro deste mundo pertencerá exclusivamente a você.',
         isEnd: true,
         onComplete: (game) => {
+          game.flags.morganaConfronted = true;
+          game.updateQuestStep(0);
+          game.updateQuestStep(1);
           game.openChimesPuzzle();
+        }
+      }
+    }
+  },
+
+  // =========================================================================
+  // FASE 5 — A ALA LACRADA (eco espectral das paredes)
+  // =========================================================================
+  sealed_wing_echo: {
+    characterId: 'elias',
+    nodes: {
+      start: {
+        text: 'Esta ala foi selada em 1923. Meu avô foi um dos últimos a atravessar este corredor. Ele descreveu pinturas que se moveriam quando o relógio de pêndulo no fundo tocasse meia-noite.',
+        options: [
+          {
+            text: 'O que aconteceu com os alunos que moravam aqui?',
+            nextNode: 'wing_lore'
+          },
+          {
+            text: 'Por que Morgana selou exatamente este lugar?',
+            nextNode: 'morgana_secret_wing'
+          }
+        ]
+      },
+      wing_lore: {
+        text: 'Os registros dizem que eles simplesmente... pararam de aparecer nos refeitórios. Um por um. Suas camas estavam intactas, as velas ainda acesas. Apenas eles tinham evaporado como névoa ao amanhecer.',
+        options: [
+          {
+            text: 'Algum rastro foi encontrado?',
+            nextNode: 'portrait_clue'
+          }
+        ]
+      },
+      morgana_secret_wing: {
+        text: 'Esta é a ala mais antiga da academia. Meu avô acreditava que a própria fundação desta parte do edifício foi erguida sobre um fragmento da fenda dimensional. Morgana não selou a ala para proteger os alunos — ela a selou para proteger o segredo.',
+        options: [
+          {
+            text: 'Que segredo?',
+            nextNode: 'portrait_clue'
+          }
+        ]
+      },
+      portrait_clue: {
+        text: 'Os retratos da galeria registram os eventos em ordem cronológica. Se você os organizar corretamente, eles ativarão o espelho mágico central. O que ele mostrará, eu prefiro não adivinhar.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.showNotification('Examine os retratos da galeria e organize-os em ordem cronológica.', 'quest');
+        }
+      }
+    }
+  },
+
+  // =========================================================================
+  // FASE 6 — A GALERIA DAS MIL PORTAS
+  // =========================================================================
+  gallery_vespera: {
+    characterId: 'vespera',
+    nodes: {
+      start: {
+        text: 'Você chegou à Galeria das Mil Portas. Poucos iniciados alcançam este limiar. Cada portal nesta sala responde a uma frequência diferente — de estrelas, de relógios, de cinzas, de espinhos e de reflexos. Apenas uma delas leva ao Entretempo.',
+        options: [
+          {
+            text: 'Como identificar qual porta é a certa?',
+            nextNode: 'door_hint'
+          },
+          {
+            text: 'Seraphine deixou algum rastro aqui antes de desaparecer?',
+            nextNode: 'seraphine_trace'
+          }
+        ]
+      },
+      seraphine_trace: {
+        text: 'Ela deixou o seu pingente estelar pendurado na maçaneta da porta correta. Uma âncora para que alguém a encontrasse. Procure o objeto pessoal dela entre os portais.',
+        options: [
+          {
+            text: 'Vou examinar cada uma das cinco portas.',
+            nextNode: 'door_hint'
+          }
+        ]
+      },
+      door_hint: {
+        text: 'As inscrições em cada portal revelam sua natureza. A Porta das Estrelas ressoa com o feitiço APERTURA — foi selada com magia dimensional. Encontre o pingente de Seraphine e use o feitiço para abrir o caminho.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.showNotification('Examine os 5 portais dimensionais e encontre o pingente de Seraphine.', 'quest');
+        }
+      }
+    }
+  },
+
+  // =========================================================================
+  // EPÍLOGO — O OUTRO LADO
+  // =========================================================================
+  epilogue_reflection: {
+    characterId: 'seraphine',
+    nodes: {
+      start: {
+        text: 'A madrugada chegou. As torres de Noctária ainda estão em pé, mas algo mudou no ar desta noite — como se a academia tivesse exalado um suspiro depois de décadas presa. Obrigada... por me lembrar de que eu existia.',
+        options: [
+          {
+            text: 'O que você vai fazer agora, Seraphine?',
+            nextNode: 'seraphine_future'
+          },
+          {
+            text: 'O que acontece com Noctária a partir de agora?',
+            nextNode: 'noctaria_future'
+          }
+        ]
+      },
+      seraphine_future: {
+        text: 'Vou reconstruir o que foi apagado. Cada nome nos registros, cada rosto nas pinturas, cada voz nos corredores que foi silenciada. Noctária me deve memórias — e eu cobrei apenas as minhas. Mas há outras almas esperando.',
+        options: [
+          {
+            text: 'Esta carta que chegou esta manhã... você a enviou?',
+            nextNode: 'new_letter'
+          }
+        ]
+      },
+      noctaria_future: {
+        text: 'A fenda dimensional foi selada pelo alinhamento que você realizou. Mas selos envelhecem. E as mil portas que existem além deste plano... elas não desaparecem quando se fecha uma delas. Apenas adormecem.',
+        options: [
+          {
+            text: 'Esta carta que chegou esta manhã... você a enviou?',
+            nextNode: 'new_letter'
+          }
+        ]
+      },
+      new_letter: {
+        text: 'Não. Essa carta com o novo selo de estrelas não veio de mim. Existem outras academias além desta. Outros limiares. Outras portas. E ao que parece... você tem o dom de cruzá-las.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.showNotification('Examine a nova carta e a Chave Prateada em sua escrivaninha.', 'quest');
         }
       }
     }
