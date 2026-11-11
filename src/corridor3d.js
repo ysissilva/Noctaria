@@ -86,6 +86,16 @@ export class Corridor3DScene {
       arrowright: false
     };
 
+    // Entrada de joystick virtual para modo mobile horizontal
+    this.touchJoystick = {
+      x: 0,
+      y: 0,
+      run: false
+    };
+    this.cameraTouchId = null;
+    this.lastTouchX = 0;
+    this.lastTouchY = 0;
+
     this.isDisposed = false;
     this.animationId = null;
 
@@ -1255,6 +1265,55 @@ export class Corridor3DScene {
     window.addEventListener('mouseup', this.onMouseUp);
     window.addEventListener('mousemove', this.onMouseMove);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
+
+    // Suporte a toque (Touch) no canvas para girar a câmera em dispositivos móveis
+    this.onTouchStart = (e) => {
+      if (this.cameraTouchId !== null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        this.cameraTouchId = t.identifier;
+        this.lastTouchX = t.clientX;
+        this.lastTouchY = t.clientY;
+        break;
+      }
+    };
+
+    this.onTouchMove = (e) => {
+      if (this.cameraTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        if (t.identifier === this.cameraTouchId) {
+          const dx = t.clientX - this.lastTouchX;
+          const dy = t.clientY - this.lastTouchY;
+          this.lastTouchX = t.clientX;
+          this.lastTouchY = t.clientY;
+
+          const sens = this.cameraAngles.sensitivity * 1.6;
+          this.cameraAngles.targetYaw -= dx * sens;
+          this.cameraAngles.targetPitch += dy * sens;
+
+          const minPitch = -0.15;
+          const maxPitch = 0.85;
+          this.cameraAngles.targetPitch = Math.max(minPitch, Math.min(maxPitch, this.cameraAngles.targetPitch));
+          break;
+        }
+      }
+    };
+
+    this.onTouchEnd = (e) => {
+      if (this.cameraTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === this.cameraTouchId) {
+          this.cameraTouchId = null;
+          break;
+        }
+      }
+    };
+
+    canvas.addEventListener('touchstart', this.onTouchStart, { passive: true });
+    window.addEventListener('touchmove', this.onTouchMove, { passive: true });
+    window.addEventListener('touchend', this.onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', this.onTouchEnd, { passive: true });
   }
 
   // Alterna manualmente o modo de perspectiva com a tecla V
@@ -1349,7 +1408,7 @@ export class Corridor3DScene {
 
     let isRunning = this.keys.shift;
 
-    // 4. Entrada do controle Gamepad
+    // 4. Entrada do controle Gamepad ou Joystick Virtual Mobile
     const gp = this.getGamepadInput();
     if (gp) {
       if (gp.x !== 0 || gp.y !== 0) {
@@ -1357,6 +1416,12 @@ export class Corridor3DScene {
         inputZ = gp.y;
       }
       if (gp.run) isRunning = true;
+    }
+
+    if (this.touchJoystick && (this.touchJoystick.x !== 0 || this.touchJoystick.y !== 0)) {
+      inputX = this.touchJoystick.x;
+      inputZ = this.touchJoystick.y;
+      if (this.touchJoystick.run) isRunning = true;
     }
 
     const inputLength = Math.hypot(inputX, inputZ);
@@ -1564,10 +1629,14 @@ export class Corridor3DScene {
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('mouseup', this.onMouseUp);
     window.removeEventListener('mousemove', this.onMouseMove);
+    window.removeEventListener('touchmove', this.onTouchMove);
+    window.removeEventListener('touchend', this.onTouchEnd);
+    window.removeEventListener('touchcancel', this.onTouchEnd);
 
     if (this.renderer && this.renderer.domElement) {
       this.renderer.domElement.removeEventListener('mousedown', this.onMouseDown);
       this.renderer.domElement.removeEventListener('wheel', this.onWheel);
+      this.renderer.domElement.removeEventListener('touchstart', this.onTouchStart);
       if (this.renderer.domElement.parentNode) {
         this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
       }

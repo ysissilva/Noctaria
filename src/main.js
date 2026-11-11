@@ -960,6 +960,22 @@ class NoctariaGame {
         <div class="corridor-interact-prompt" id="corridor-interact-prompt">
           <button class="btn-enter-gate" id="btn-enter-gate">✦ ADENTRAR SALÃO DAS CINZAS ✦</button>
         </div>
+
+        <!-- Controles Touch para Modo Mobile Horizontal -->
+        <div class="mobile-touch-controls" id="mobile-touch-controls">
+          <div class="mobile-joystick-zone" id="mobile-joystick-zone">
+            <div class="mobile-joystick-base" id="mobile-joystick-base">
+              <div class="mobile-joystick-stick" id="mobile-joystick-stick"></div>
+            </div>
+          </div>
+
+          <div class="mobile-action-buttons">
+            <button class="mobile-action-btn" id="mobile-btn-view" type="button" aria-label="Alternar Câmera">1ª/3ª</button>
+            <button class="mobile-action-btn" id="mobile-btn-run" type="button" aria-label="Correr">CORRER</button>
+            <button class="mobile-action-btn" id="mobile-btn-jump" type="button" aria-label="Pular">PULAR</button>
+            <button class="mobile-action-btn mobile-action-primary" id="mobile-btn-interact" type="button" aria-label="Abrir Porta">ABRIR (E)</button>
+          </div>
+        </div>
       </div>
     `;
 
@@ -1037,6 +1053,135 @@ class NoctariaGame {
       enterBtn.onclick = () => {
         this.exit3DCorridor();
       };
+    }
+
+    // Configurar Joystick Virtual e Botões Touch para Mobile Horizontal
+    const joyZone = document.getElementById('mobile-joystick-zone');
+    const joyBase = document.getElementById('mobile-joystick-base');
+    const joyStick = document.getElementById('mobile-joystick-stick');
+    let joyTouchId = null;
+    const maxRadius = 42;
+
+    if (joyZone && joyBase && joyStick) {
+      const updateJoystick = (clientX, clientY) => {
+        const rect = joyBase.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        let dx = clientX - centerX;
+        let dy = clientY - centerY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxRadius) {
+          dx = (dx / dist) * maxRadius;
+          dy = (dy / dist) * maxRadius;
+        }
+        joyStick.style.transform = `translate(${dx}px, ${dy}px)`;
+        if (this.activeCorridor3D && this.activeCorridor3D.touchJoystick) {
+          this.activeCorridor3D.touchJoystick.x = dx / maxRadius;
+          this.activeCorridor3D.touchJoystick.y = dy / maxRadius;
+        }
+      };
+
+      const resetJoystick = () => {
+        joyTouchId = null;
+        joyStick.style.transform = 'translate(0px, 0px)';
+        if (this.activeCorridor3D && this.activeCorridor3D.touchJoystick) {
+          this.activeCorridor3D.touchJoystick.x = 0;
+          this.activeCorridor3D.touchJoystick.y = 0;
+        }
+      };
+
+      joyZone.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        if (joyTouchId === null && e.changedTouches.length > 0) {
+          const t = e.changedTouches[0];
+          joyTouchId = t.identifier;
+          updateJoystick(t.clientX, t.clientY);
+        }
+      }, { passive: true });
+
+      joyZone.addEventListener('touchmove', (e) => {
+        e.stopPropagation();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier === joyTouchId) {
+            updateJoystick(t.clientX, t.clientY);
+            break;
+          }
+        }
+      }, { passive: true });
+
+      joyZone.addEventListener('touchend', (e) => {
+        e.stopPropagation();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joyTouchId) {
+            resetJoystick();
+            break;
+          }
+        }
+      }, { passive: true });
+
+      joyZone.addEventListener('touchcancel', resetJoystick, { passive: true });
+    }
+
+    const btnJump = document.getElementById('mobile-btn-jump');
+    const btnInteract = document.getElementById('mobile-btn-interact');
+    const btnView = document.getElementById('mobile-btn-view');
+    const btnRun = document.getElementById('mobile-btn-run');
+
+    if (btnJump) {
+      btnJump.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.activeCorridor3D?.triggerJump();
+      }, { passive: false });
+      btnJump.onclick = (e) => {
+        e.stopPropagation();
+        this.activeCorridor3D?.triggerJump();
+      };
+    }
+
+    if (btnInteract) {
+      btnInteract.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.activeCorridor3D?.interactWithCurrentDoor();
+      }, { passive: false });
+      btnInteract.onclick = (e) => {
+        e.stopPropagation();
+        this.activeCorridor3D?.interactWithCurrentDoor();
+      };
+    }
+
+    if (btnView) {
+      btnView.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.activeCorridor3D?.togglePerspective();
+      }, { passive: false });
+      btnView.onclick = (e) => {
+        e.stopPropagation();
+        this.activeCorridor3D?.togglePerspective();
+      };
+    }
+
+    if (btnRun) {
+      const setRun = (state) => {
+        if (this.activeCorridor3D && this.activeCorridor3D.touchJoystick) {
+          this.activeCorridor3D.touchJoystick.run = state;
+        }
+        btnRun.classList.toggle('active', state);
+      };
+      btnRun.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setRun(true);
+      }, { passive: false });
+      btnRun.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setRun(false);
+      }, { passive: false });
+      btnRun.addEventListener('touchcancel', () => setRun(false), { passive: true });
     }
   }
 

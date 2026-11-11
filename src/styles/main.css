@@ -1938,3 +1938,351 @@ body.cursor-talk #custom-cursor .cursor-inspect-icon {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* ==========================================================================
+   MODO RESPONSIVO E MOBILE HORIZONTAL (PAISAGEM)
+   ========================================================================== */
+
+/* Overlay de aviso caso o jogador segure o celular em pé (retrato) */
+.mobile-rotate-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  background: radial-gradient(circle at center, #141c38 0%, #050711 100%);
+  z-index: 999999;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.mobile-rotate-box {
+  max-width: 340px;
+  background: rgba(16, 23, 47, 0.9);
+  border: 1px solid var(--color-luminous-purple);
+  border-radius: 12px;
+  padding: 28px 22px;
+  box-shadow: 0 0 35px rgba(165, 138, 232, 0.35);
+}
+
+.mobile-rotate-icon {
+  font-size: 3.2rem;
+  margin-bottom: 14px;
+  color: var(--color-luminous-purple);
+  animation: rotatePhonePulse 2s infinite ease-in-out;
+}
+
+@keyframes rotatePhonePulse {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+
+.mobile-rotate-title {
+  font-family: var(--font-title);
+  font-size: 1.3rem;
+  color: var(--color-luminous-purple);
+  margin-bottom: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mobile-rotate-desc {
+  font-size: 0.92rem;
+  color: var(--color-lunar-white);
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .mobile-rotate-overlay {
+    display: flex;
+  }
+}
+
+/* Controles Touch (Joystick Virtual + Botões de Ação) */
+.mobile-touch-controls {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 75;
+}
+
+.mobile-joystick-zone {
+  position: absolute;
+  bottom: 22px;
+  left: 26px;
+  width: 120px;
+  height: 120px;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.mobile-joystick-base {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: rgba(8, 12, 29, 0.65);
+  border: 2px solid rgba(165, 138, 232, 0.55);
+  box-shadow: 0 0 18px rgba(8, 12, 29, 0.7), inset 0 0 12px rgba(165, 138, 232, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+}
+
+.mobile-joystick-stick {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #d8ccf5, var(--color-arcane-purple));
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  transition: transform 0.04s linear;
+}
+
+.mobile-action-buttons {
+  position: absolute;
+  bottom: 22px;
+  right: 26px;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 10px;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.mobile-action-btn {
+  min-width: 66px;
+  height: 46px;
+  padding: 0 12px;
+  border-radius: 24px;
+  background: rgba(8, 12, 29, 0.78);
+  border: 1.5px solid rgba(165, 138, 232, 0.55);
+  color: var(--color-lunar-white);
+  font-family: var(--font-title);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-action-btn:active,
+.mobile-action-btn.active {
+  background: var(--color-arcane-purple);
+  border-color: #ffffff;
+  color: #ffffff;
+  transform: scale(0.95);
+}
+
+.mobile-action-btn.mobile-action-primary {
+  background: linear-gradient(135deg, rgba(118, 80, 184, 0.85), rgba(36, 59, 112, 0.9));
+  border-color: var(--color-luminous-purple);
+}
+
+/* Ativar controles touch em dispositivos de toque ou telas mobile/tablet */
+@media (pointer: coarse), (max-width: 1024px) and (max-height: 600px) {
+  body {
+    cursor: auto;
+  }
+  #custom-cursor {
+    display: none !important;
+  }
+  .mobile-touch-controls {
+    display: block;
+  }
+}
+
+/* Ajustes de layout para Mobile Horizontal (Landscape com altura reduzida) */
+@media (max-height: 540px) and (orientation: landscape) {
+  #app,
+  .corridor-3d-screen,
+  .intro-screen {
+    height: 100dvh;
+  }
+
+  /* Menu Inicial compacto na horizontal */
+  .menu-screen {
+    padding: 10px 20px;
+  }
+  .menu-container {
+    gap: 0.85rem;
+  }
+  .game-title {
+    font-size: clamp(1.8rem, 4.2vw, 2.6rem);
+    margin-bottom: 0.1rem;
+  }
+  .game-subtitle {
+    font-size: 0.78rem;
+    margin-bottom: 0.35rem;
+  }
+  .game-tagline {
+    font-size: 0.8rem;
+    line-height: 1.3;
+    max-width: 620px;
+  }
+  .menu-actions {
+    gap: 8px;
+  }
+  .btn-gothic {
+    padding: 7px 14px;
+    font-size: 0.76rem;
+  }
+
+  /* HUD Superior mais enxuto */
+  .game-topbar {
+    height: 44px;
+    padding: 0 14px;
+  }
+  .loc-name {
+    font-size: 0.9rem;
+  }
+  .nav-btn {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+    gap: 5px;
+  }
+
+  /* Corredor 3D em Mobile Horizontal */
+  .corridor-hud {
+    top: 10px;
+    left: 14px;
+    padding: 8px 12px;
+    max-width: 55vw;
+  }
+  .corridor-hud-title {
+    font-size: 0.82rem;
+    margin-bottom: 2px;
+  }
+  .corridor-hud-desc {
+    font-size: 0.7rem;
+  }
+
+  .corridor-mini-menu-wrapper {
+    top: 10px;
+    right: 14px;
+  }
+  .corridor-menu-toggle-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+  .corridor-mini-menu-panel {
+    width: min(310px, 85vw);
+    max-height: calc(100dvh - 65px);
+    overflow-y: auto;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .corridor-ctrl-row {
+    font-size: 0.72rem;
+    gap: 6px;
+  }
+  .corridor-key {
+    min-width: 22px;
+    height: 22px;
+    font-size: 0.68rem;
+  }
+
+  .corridor-door-notification {
+    top: 56px;
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    max-width: 82vw;
+    text-align: center;
+  }
+
+  .corridor-interact-prompt {
+    bottom: 16px;
+  }
+  .btn-enter-gate {
+    padding: 9px 18px;
+    font-size: 0.82rem;
+  }
+
+  /* Caixa de Diálogo compacta para não cobrir a cena */
+  .dialogue-overlay {
+    flex-direction: row;
+    bottom: 8px;
+    width: 95vw;
+    max-height: 46dvh;
+  }
+  .dialogue-portrait-col {
+    width: 110px;
+    height: auto;
+    flex-direction: column;
+    padding: 8px;
+    gap: 4px;
+  }
+  .portrait-wrapper {
+    width: 56px;
+    height: 56px;
+  }
+  .speaker-title {
+    font-size: 0.62rem;
+    margin-top: 2px;
+  }
+  .dialogue-content-col {
+    padding: 10px 14px;
+    overflow-y: auto;
+  }
+  .speaker-name {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+  .dialogue-text {
+    font-size: 0.86rem;
+    line-height: 1.45;
+    min-height: 32px;
+    margin-bottom: 8px;
+  }
+  .dialogue-options {
+    gap: 6px;
+  }
+  .dialogue-opt-btn {
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+
+  /* Barra de Feitiços */
+  .spell-bar {
+    bottom: 8px;
+    padding: 4px 10px;
+    gap: 8px;
+  }
+  .spell-btn {
+    padding: 5px 12px;
+    font-size: 0.72rem;
+  }
+
+  /* Modais (Diário, Inventário, Configurações, Puzzles) */
+  .gothic-modal {
+    width: 94vw;
+    max-height: 90dvh;
+  }
+  .modal-header {
+    padding: 10px 16px;
+  }
+  .modal-title {
+    font-size: 1.05rem;
+  }
+  .modal-body {
+    padding: 12px 16px;
+  }
+  .puzzle-box {
+    padding: 14px;
+  }
+  .character-card-visual {
+    height: 160px;
+  }
+}
