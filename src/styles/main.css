@@ -439,16 +439,79 @@ body, html {
   white-space: nowrap;
   color: var(--color-lunar-white);
   pointer-events: none;
-  opacity: 0;
-  transform: translateY(4px);
+  opacity: 0.9;
+  transform: translateY(0);
   transition: all 0.25s ease;
 }
 
-.hotspot:hover .hotspot-label {
+.hotspot:hover .hotspot-label,
+.hotspot.hotspot-active .hotspot-label {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(-2px);
   border-color: var(--color-luminous-purple);
-  box-shadow: 0 0 10px rgba(165, 138, 232, 0.4);
+  box-shadow: 0 0 12px rgba(165, 138, 232, 0.6);
+}
+
+.hotspot.hotspot-active .hotspot-pin {
+  box-shadow: 0 0 18px #ffffff, 0 0 28px var(--color-luminous-purple);
+  transform: scale(1.25);
+}
+
+.hotspot-key-hint {
+  display: inline-block;
+  background: #19203a;
+  border: 1px solid #7650b8;
+  color: #ffdf9e;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 5px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+/* Standee 2D do Protagonista / Personagem explorador */
+.player-standee {
+  position: absolute;
+  pointer-events: none;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.5s ease;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.85));
+}
+
+.player-standee-figure {
+  width: 58px;
+  height: 125px;
+  position: relative;
+  animation: standeeBreath 3.5s infinite ease-in-out;
+}
+
+@keyframes standeeBreath {
+  0% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-3px) scaleY(1.02); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+.player-standee-shadow {
+  width: 54px;
+  height: 14px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 0%, transparent 75%);
+  margin-top: -6px;
+}
+
+.player-standee-tag {
+  background: rgba(14, 20, 36, 0.9);
+  border: 1px solid #5376c8;
+  color: #a5c2f5;
+  font-size: 0.65rem;
+  font-family: var(--font-ui);
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 /* Hidden secret door reveal effect */
@@ -533,7 +596,8 @@ body, html {
   border: 1px solid var(--color-aged-silver);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 30px rgba(118, 80, 184, 0.2);
   border-radius: 6px;
-  z-index: 30;
+  z-index: 9999;
+  pointer-events: auto;
   display: flex;
   overflow: hidden;
   backdrop-filter: blur(14px);
@@ -661,7 +725,8 @@ body, html {
   position: absolute;
   inset: 0;
   background: rgba(8, 12, 29, 0.82);
-  z-index: 50;
+  z-index: 9999;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1937,6 +2002,8 @@ body.cursor-talk #custom-cursor .cursor-inspect-icon {
 .corridor-door-notification.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /* ==========================================================================
@@ -2285,4 +2352,610 @@ body.cursor-talk #custom-cursor .cursor-inspect-icon {
   .character-card-visual {
     height: 160px;
   }
+}
+
+/* ========================================================
+   LIVRO DE MATRÍCULAS & ANIMAÇÃO DE PÁGINAS ROLANDO
+   ======================================================== */
+
+.ledger-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(4, 6, 12, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: ledgerFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.ledger-modal-overlay.ledger-fade-out {
+  animation: ledgerFadeOut 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes ledgerFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ledgerFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+.ledger-modal-box {
+  width: 100%;
+  max-width: 960px;
+  background: linear-gradient(145deg, #12101a 0%, #1a1626 50%, #0d0b14 100%);
+  border: 1px solid rgba(212, 168, 77, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(180, 130, 40, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.ledger-modal-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, #e6c875, #b8860b, transparent);
+}
+
+.ledger-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(212, 168, 77, 0.18);
+  background: rgba(10, 8, 16, 0.6);
+}
+
+.ledger-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.book-icon-badge {
+  font-size: 28px;
+  filter: drop-shadow(0 2px 8px rgba(212, 168, 77, 0.4));
+}
+
+.ledger-modal-header h3 {
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 1.25rem;
+  letter-spacing: 0.08em;
+  color: #f5e4bb;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.ledger-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: #a49bbb;
+  font-style: italic;
+}
+
+.ledger-close-btn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #d1c7bd;
+  font-size: 26px;
+  line-height: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ledger-close-btn:hover {
+  background: rgba(220, 50, 50, 0.25);
+  border-color: rgba(220, 50, 50, 0.6);
+  color: #ff9999;
+  transform: rotate(90deg);
+}
+
+/* ========================================================
+   STAGE & ANIMATED SPREAD (DOUBLE PAGE FOLIO)
+   ======================================================== */
+
+.ledger-stage {
+  padding: 24px 32px;
+  min-height: 440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  position: relative;
+  background: radial-gradient(ellipse at center, rgba(30, 24, 45, 0.45) 0%, rgba(8, 6, 12, 0.9) 100%);
+}
+
+.ledger-stage.page-roll-animation .ledger-spread,
+.ledger-stage.page-roll-animation .ledger-secret-letter-view {
+  animation: rollPageFlip 0.26s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes rollPageFlip {
+  0% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(-35deg) scale(0.97);
+    filter: brightness(0.75) contrast(1.15);
+    opacity: 0.6;
+  }
+  100% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.ledger-spread {
+  display: flex;
+  width: 100%;
+  max-width: 860px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.95), 0 0 25px rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
+  position: relative;
+  border: 1px solid #3c2a1a;
+  background: #2b1f13;
+}
+
+/* Book spine shadow in middle */
+.ledger-spread::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 32px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.5) 100%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.ledger-page {
+  flex: 1;
+  padding: 32px 36px;
+  min-height: 380px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(245, 235, 205, 0.97) 0%, rgba(226, 206, 166, 0.96) 65%, rgba(196, 170, 125, 0.98) 100%),
+    repeating-linear-gradient(0deg, rgba(140, 110, 70, 0.05) 0px, rgba(140, 110, 70, 0.05) 1px, transparent 1px, transparent 24px);
+  color: #2b1f14;
+  font-family: 'Cinzel', serif;
+  box-shadow: inset 0 0 40px rgba(95, 65, 30, 0.25);
+}
+
+.left-page {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  border-right: 1px solid rgba(0, 0, 0, 0.35);
+}
+
+.right-page {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.page-header-ornament {
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: #7a5828;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.page-title-ledger {
+  text-align: center;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  color: #3f2a14;
+  border-bottom: 2px solid #8c6a38;
+  padding-bottom: 8px;
+  margin-bottom: 20px;
+  font-weight: 800;
+}
+
+.matricula-entry {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(110, 80, 45, 0.35);
+  font-family: 'Cinzel', serif;
+}
+
+.mat-num {
+  font-weight: 800;
+  color: #7b2c2c;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+}
+
+.mat-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a120c;
+  margin-top: 2px;
+}
+
+.mat-status {
+  font-size: 0.8rem;
+  color: #55412e;
+  font-style: italic;
+  font-family: serif;
+}
+
+.folio-seal {
+  margin-top: auto;
+  align-self: flex-start;
+  padding-top: 16px;
+}
+
+.seal-stamp {
+  border: 2px solid #8e2b2b;
+  color: #8e2b2b;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 800;
+  transform: rotate(-4deg);
+  opacity: 0.85;
+}
+
+.page-number-folio {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #8c7355;
+  font-family: serif;
+  font-style: italic;
+}
+
+/* ========================================================
+   TORN PAGE 42 & CLUE NOTE
+   ======================================================== */
+
+.torn-edge-folio {
+  position: relative;
+  overflow: hidden;
+}
+
+.torn-notice-badge {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: rgba(140, 20, 20, 0.85);
+  color: #fff;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 800;
+}
+
+.torn-stub {
+  margin-top: 14px;
+  padding: 14px;
+  background: rgba(90, 20, 20, 0.08);
+  border: 1px dashed rgba(140, 30, 30, 0.45);
+  border-radius: 6px;
+}
+
+.torn-rip-visual {
+  margin-top: 8px;
+}
+
+.rip-jagged {
+  height: 12px;
+  background: repeating-linear-gradient(45deg, #441111, #441111 6px, transparent 6px, transparent 12px);
+  opacity: 0.4;
+  border-radius: 2px;
+}
+
+.rip-fibers {
+  margin-top: 10px;
+  color: #8b1818;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.clue-tucked-note {
+  margin-top: 24px;
+  position: relative;
+  background: #fdf6dc;
+  border: 1px solid #d4b574;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  padding: 16px;
+  border-radius: 4px;
+  transform: rotate(1deg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clue-tucked-note:hover {
+  transform: rotate(0deg) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
+.wax-drop {
+  position: absolute;
+  top: -8px;
+  left: 20px;
+  width: 18px;
+  height: 18px;
+  background: #9b2226;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.folded-note-teaser {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-pin-icon {
+  font-size: 1.3rem;
+}
+
+.note-preview-text strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #4a3319;
+}
+
+.note-preview-text em {
+  display: block;
+  font-size: 0.98rem;
+  color: #7b1d1d;
+  font-weight: 700;
+  margin-top: 4px;
+  font-family: 'Cinzel', serif;
+}
+
+.btn-unfold-action {
+  align-self: flex-start;
+  margin-top: 8px;
+  background: #7a2323;
+  color: #f7e8ce;
+  border: 1px solid #a83d3d;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Cinzel', serif;
+}
+
+.btn-unfold-action:hover {
+  background: #9c2d2d;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(156, 45, 45, 0.4);
+}
+
+/* ========================================================
+   SECRET PARCHMENT LETTER VIEW (PAGE 2)
+   ======================================================== */
+
+.ledger-secret-letter-view {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  justify-content: center;
+}
+
+.parchment-clue-scroll {
+  width: 100%;
+  padding: 40px 48px;
+  background: radial-gradient(ellipse at center, #fff9e6 0%, #faeec7 60%, #e6cf9b 100%);
+  border: 2px solid #b89758;
+  border-radius: 8px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(190, 150, 70, 0.25);
+  position: relative;
+  color: #2e1d0f;
+  animation: scrollUnroll 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scrollUnroll {
+  from {
+    transform: scaleY(0.7) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.scroll-wax-seal {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  width: 36px;
+  height: 36px;
+  background: #8b1818;
+  color: #f8dfa5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  border: 1px solid #c24545;
+}
+
+.parchment-headline {
+  margin: 0 0 20px;
+  font-family: 'Cinzel', serif;
+  font-size: 1.25rem;
+  color: #4b2612;
+  border-bottom: 1px solid #b9935a;
+  padding-bottom: 10px;
+  letter-spacing: 0.05em;
+}
+
+.parchment-handwriting {
+  font-family: serif;
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: #2b180d;
+  font-style: italic;
+  margin-bottom: 24px;
+}
+
+.parchment-handwriting p {
+  margin: 0 0 14px;
+}
+
+.parchment-signature {
+  text-align: right;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  color: #7b2c2c;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+}
+
+.parchment-actions {
+  display: flex;
+  justify-content: flex-start;
+  border-top: 1px solid #d4bb88;
+  padding-top: 18px;
+}
+
+.btn-parchment-nav {
+  background: #3e2816;
+  color: #f3dfb9;
+  border: 1px solid #7c542e;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Cinzel', serif;
+}
+
+.btn-parchment-nav:hover {
+  background: #5a3a20;
+  color: #fff;
+}
+
+/* ========================================================
+   MODAL FOOTER & ACTION BUTTONS
+   ======================================================== */
+
+.ledger-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(212, 168, 77, 0.18);
+  background: rgba(10, 8, 16, 0.7);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ledger-hints {
+  font-size: 0.85rem;
+  color: #d8c7a6;
+}
+
+.ledger-hints strong {
+  color: #e6c875;
+}
+
+.ledger-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ledger-nav-btn {
+  background: rgba(212, 168, 77, 0.12);
+  color: #e6c875;
+  border: 1px solid rgba(212, 168, 77, 0.45);
+  border-radius: 6px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Cinzel', serif;
+}
+
+.ledger-nav-btn:hover {
+  background: rgba(212, 168, 77, 0.25);
+  border-color: #f3d789;
+  color: #fff;
+}
+
+/* ========================================================
+   ATALHOS E CURSOR VISÍVEL NO MODAL DO LIVRO
+   ======================================================== */
+
+.ledger-modal-overlay {
+  cursor: default !important;
+}
+
+.ledger-modal-overlay * {
+  cursor: inherit;
+}
+
+.ledger-modal-overlay button,
+.ledger-modal-overlay .btn-unfold-action,
+.ledger-modal-overlay .btn-parchment-nav,
+.ledger-modal-overlay .ledger-close-btn,
+.ledger-modal-overlay .ledger-nav-btn,
+.ledger-modal-overlay .clue-tucked-note {
+  cursor: pointer !important;
+}
+
+.ledger-header-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shortcut-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(212, 168, 77, 0.3);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  color: #dfd7cb;
+  letter-spacing: 0.04em;
+  font-family: 'Cinzel', serif;
+}
+
+.shortcut-tag kbd {
+  background: #2a2035;
+  color: #f7d58b;
+  border: 1px solid #7c5c2d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-weight: 800;
+  font-size: 0.75rem;
 }

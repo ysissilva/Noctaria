@@ -882,21 +882,34 @@ class NoctariaGame {
 
 
 
-  // --- MODO DE EXPLORAÇÃO 3D DO CORREDOR ---
-  enter3DCorridor() {
+  // --- MODO DE EXPLORAÇÃO 3D DO CORREDOR E DA SALA DA DIRETORIA NO PORÃO ---
+  enter3DCorridor(options = {}) {
     audioSystem.playAmbience('corridor');
     audioSystem.startBreathingLoop();
+
+    const isBasement = (options && options.startInBasement) || this.state.currentChapter === 'phase_1';
+    const hudTitle = isBasement ? 'Salão das Cinzas • Sala da Diretoria (Fase 1)' : 'Corredor dos Ecos Ancestrais';
+    const hudDesc = isBasement
+      ? 'Investigue a sala: aproxime-se da mesa para abrir o Livro de Matrículas [E], fale com a Diretora Morgana Vale [E] e examine o mural e o retrato.'
+      : 'Explore a ala leste do castelo. Caminhe até o portal rúnico ao fundo ou investigue as portas.';
 
     // Limpar cena anterior
     this.root.innerHTML = `
       <div class="corridor-3d-screen" id="corridor-3d-screen">
         <div id="corridor-3d-canvas-container"></div>
 
-        <div class="corridor-loading" id="corridor-3d-loading">Carregando corredor de Noctária...</div>
+        <div class="corridor-loading" id="corridor-3d-loading">Carregando ${isBasement ? 'Sala da Diretoria' : 'Corredor de Noctária'}...</div>
 
         <div class="corridor-hud">
-          <div class="corridor-hud-title">Corredor dos Ecos Ancestrais</div>
-          <div class="corridor-hud-desc">Explore a ala leste do castelo. Caminhe até o portal rúnico ao fundo.</div>
+          <div class="corridor-hud-title">${hudTitle}</div>
+          <div class="corridor-hud-desc">${hudDesc}</div>
+        </div>
+
+        <div class="corridor-top-bar" id="corridor-top-bar" style="position:absolute; top:18px; right:24px; display:flex; gap:10px; z-index:90;">
+          <button class="btn-gothic" id="corridor-journal-btn" style="padding:6px 14px; font-size:0.78rem;" title="Abrir Diário">📖 DIÁRIO</button>
+          <button class="btn-gothic" id="corridor-inv-btn" style="padding:6px 14px; font-size:0.78rem;" title="Abrir Inventário">🎒 INVENTÁRIO</button>
+          <button class="btn-gothic" id="corridor-chars-btn" style="padding:6px 14px; font-size:0.78rem;" title="Ver Personagens">👥 PERSONAGENS</button>
+          <button class="btn-gothic" id="corridor-mainmenu-btn" style="padding:6px 14px; font-size:0.78rem;" title="Voltar ao Menu">🚪 MENU</button>
         </div>
 
         <div class="corridor-mini-menu-wrapper" id="corridor-mini-menu-wrapper">
@@ -1007,8 +1020,43 @@ class NoctariaGame {
       }
     };
 
+    // Conectar botões da barra superior 3D
+    const journalBtn = document.getElementById('corridor-journal-btn');
+    if (journalBtn) {
+      journalBtn.onclick = () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.openJournalModal();
+      };
+    }
+    const invBtn = document.getElementById('corridor-inv-btn');
+    if (invBtn) {
+      invBtn.onclick = () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.openInventoryModal();
+      };
+    }
+    const charsBtn = document.getElementById('corridor-chars-btn');
+    if (charsBtn) {
+      charsBtn.onclick = () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.openCharactersModal();
+      };
+    }
+    const mainMenuBtn = document.getElementById('corridor-mainmenu-btn');
+    if (mainMenuBtn) {
+      mainMenuBtn.onclick = () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        if (this.activeCorridor3D) {
+          this.activeCorridor3D.dispose();
+          this.activeCorridor3D = null;
+        }
+        this.renderMainMenu();
+      };
+    }
+
     const container = document.getElementById('corridor-3d-canvas-container');
     this.activeCorridor3D = new Corridor3DScene(container, {
+      startInBasement: isBasement,
       onInteract: () => {
         this.exit3DCorridor();
       },
@@ -1020,6 +1068,38 @@ class NoctariaGame {
       },
       onOpenSettings: () => {
         toggleCorridorSettings();
+      },
+      onInspectLedger: () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.examineAlteredLedger();
+      },
+      onTalkMorgana: () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.startDialogue('morgana_phase1', 'start');
+      },
+      onTalkElias: () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.startDialogue('elias_phase1', 'start');
+      },
+      onInspectNoticeBoard: () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.examineNoticeBoard();
+      },
+      onInspectPortrait: () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.examineErasedPortrait();
+      },
+      onInspectStairPainting: () => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        this.examineStairPainting();
+      },
+      onEnterLibrary: () => {
+        if (this.flags.phase1Completed) {
+          if (document.pointerLockElement) document.exitPointerLock?.();
+          this.changeChapter('phase_2');
+        } else {
+          this.showNotification('🔒 A passagem permanece selada. Conclua as investigações de Seraphine primeiro!', 'warning');
+        }
       }
     });
 
@@ -1189,14 +1269,13 @@ class NoctariaGame {
     if (door.id === 'door_basement') {
       audioSystem.playDoor('open');
       audioSystem.playFootstep(true);
-      this.showNotification('🚪 Você abriu a porta do Porão Antigo! Adentrando as catacumbas...', 'quest');
-      setTimeout(() => {
-        if (this.activeCorridor3D) {
-          this.activeCorridor3D.dispose();
-          this.activeCorridor3D = null;
-        }
-        this.changeChapter('phase_1');
-      }, 1200);
+      this.showNotification('🚪 A porta do Porão Antigo se abre! Desça a escadaria para entrar na Sala da Diretoria.', 'quest');
+      this.state.currentChapter = 'phase_1';
+      this.state.currentScene = 'basement';
+      this.saveGame();
+      if (this.activeCorridor3D) {
+        this.activeCorridor3D.openBasementDoor();
+      }
     } else {
       audioSystem.playDoor('handle');
       this.showNotification('🔒 ' + door.name + ': ' + door.inspectText, 'info');
@@ -1204,16 +1283,24 @@ class NoctariaGame {
   }
 
   exit3DCorridor() {
+    this.state.currentChapter = 'phase_1';
+    this.state.currentScene = 'basement';
+    this.saveGame();
     if (this.activeCorridor3D) {
-      this.activeCorridor3D.dispose();
-      this.activeCorridor3D = null;
+      this.activeCorridor3D.enterBasementRoom();
+    } else {
+      this.enter3DCorridor({ startInBasement: true });
     }
-    this.changeChapter('phase_1');
   }
 
   // --- CENA JOGÁVEL E VIEWPORT ---
 
   renderGameWorld() {
+    if (this.state.currentChapter === 'phase_1') {
+      this.enter3DCorridor({ startInBasement: true });
+      return;
+    }
+
     audioSystem.playMusic('exploration');
     audioSystem.playAmbience('corridor');
     audioSystem.startBreathingLoop();
@@ -1446,72 +1533,68 @@ class NoctariaGame {
 
 
 
-    // 2. FASE 1: SALÃO DAS CINZAS
-
+    // 2. FASE 1: SALÃO DAS CINZAS (Porão de Pedra & Sala da Direção)
     else if (scene === 'ashes_hall') {
+      // 1. Personagem do jogador (boneco) posicionado nos degraus da escadaria
+      const playerStandee = document.createElement('div');
+      playerStandee.className = 'player-standee';
+      playerStandee.style.left = '39%';
+      playerStandee.style.top = '53%';
+      playerStandee.innerHTML = `
+        <div class="player-standee-figure">
+          <svg viewBox="0 0 60 130" width="60" height="130" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="standee-coat" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#141a29"/>
+                <stop offset="100%" stop-color="#0a0d14"/>
+              </linearGradient>
+            </defs>
+            <!-- Capa e silhueta gótica estilizada do protagonista -->
+            <path d="M 16 38 Q 30 32 44 38 L 52 108 L 8 108 Z" fill="url(#standee-coat)" stroke="#3a4c72" stroke-width="2"/>
+            <path d="M 8 46 Q 30 70 52 46" fill="#1b2438"/>
+            <!-- Cabeça e cabelo -->
+            <ellipse cx="30" cy="22" rx="11" ry="14" fill="#121622" stroke="#485c88" stroke-width="1.5"/>
+            <!-- Pernas e botas nos degraus de pedra -->
+            <rect x="18" y="104" width="8" height="24" rx="3" fill="#080a10"/>
+            <rect x="34" y="104" width="8" height="24" rx="3" fill="#080a10"/>
+          </svg>
+        </div>
+        <div class="player-standee-shadow"></div>
+        <div class="player-standee-tag">✦ Protagonista (Na Escada)</div>
+      `;
+      layer.appendChild(playerStandee);
 
-      // Elias
-
-      this.createHotspot(layer, '30%', '72%', 'Elias Crowe', () => {
-
+      // 2. Elias Crowe (Perto do mural e arco do porão)
+      this.createHotspot(layer, '17%', '62%', 'Elias Crowe (Falar)', () => {
         this.startDialogue('elias_phase1', 'start');
+      }, '#4ef0c4', 'elias');
 
-      });
-
-
-
-      // Diretora Morgana Vale
-
-      this.createHotspot(layer, '50%', '52%', 'Diretora Morgana Vale', () => {
-
+      // 3. Diretora Morgana Vale (Na sala de direção, junto à mesa executiva)
+      this.createHotspot(layer, '50%', '52%', 'Diretora Morgana Vale (Falar)', () => {
         this.startDialogue('morgana_phase1', 'start');
+      }, '#a58ae8', 'morgana');
 
+      // 4. Mural de Avisos Estudantis
+      this.createHotspot(layer, '24%', '42%', 'Mural de Avisos Estudantis', () => {
+        this.examineNoticeBoard();
       }, '#7650b8');
 
-
-
-      // Mural de Avisos
-
-      this.createHotspot(layer, '16%', '60%', 'Mural de Avisos Estudantis', () => {
-
-        this.examineNoticeBoard();
-
-      });
-
-
-
-      // Retrato Raspado
-
-      this.createHotspot(layer, '24%', '42%', 'Retrato Adulterado', () => {
-
+      // 5. Retrato Raspado dos Fundadores
+      this.createHotspot(layer, '31%', '72%', 'Retrato Adulterado (Turma 42)', () => {
         this.examineErasedPortrait();
+      }, '#7650b8');
 
-      });
-
-
-
-      // Livro de Matrículas Alterado
-
+      // 6. O Livro de Matrículas Oficial sobre a mesa de escritório da Diretoria
       this.createHotspot(layer, '76%', '76%', 'Livro de Matrículas Oficial', () => {
-
         this.examineAlteredLedger();
+      }, '#ffd580');
 
-      });
-
-
-
-      // Passagem para a Biblioteca se fase 1 concluída
-
+      // 7. Passagem para a Biblioteca se fase 1 concluída
       if (this.flags.phase1Completed) {
-
         this.createHotspot(layer, '86%', '58%', 'Entrada para a Biblioteca Velada', () => {
-
           this.changeChapter('phase_2');
-
         }, '#4ef0c4');
-
       }
-
     }
 
 
@@ -1994,30 +2077,42 @@ class NoctariaGame {
 
 
 
-  createHotspot(parent, left, top, label, onClick, color = '#A58AE8') {
-
+  createHotspot(parent, left, top, label, onClick, color = '#A58AE8', characterKey = null) {
     const spot = document.createElement('div');
-
     spot.className = 'hotspot';
-
+    if (characterKey) {
+      spot.classList.add('hotspot-character');
+    }
     spot.style.left = left;
-
     spot.style.top = top;
+    spot.tabIndex = 0;
+
+    let pinHtml = `<div class="hotspot-pin" style="background:${color};"></div>`;
+    if (characterKey && CHARACTERS[characterKey]) {
+      const char = CHARACTERS[characterKey];
+      pinHtml = `
+        <div class="hotspot-avatar-pin" title="${char.name}">
+          ${char.image ? `<img src="${char.image}" alt="${char.name}">` : char.avatarSvg}
+        </div>
+      `;
+    }
 
     spot.innerHTML = `
-
       <div class="hotspot-pulse"></div>
-
-      <div class="hotspot-pin" style="background:${color};"></div>
-
-      <div class="hotspot-label">${label}</div>
-
+      ${pinHtml}
+      <div class="hotspot-label"><kbd class="hotspot-key-hint">E</kbd>${label}</div>
     `;
 
     spot.onclick = onClick;
+    spot.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key.toLowerCase() === 'e' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }
+    });
 
     parent.appendChild(spot);
-
   }
 
 
@@ -2200,35 +2295,221 @@ class NoctariaGame {
 
 
   examineAlteredLedger() {
-
     this.flags.alteredLedgerExamined = true;
-
-    this.openInspectModal(
-
-      'Livro de Matrículas Oficial de Noctária',
-
-      'Um tomo solene encadernado em couro negro. Ao folhear as matrículas, você percebe que a folha referente ao número 42 foi arrancada à força rente à lombada. Alguém deixou um bilhete dobrado na fresta:\n\n“Ela não atravessou a porta sozinha.”',
-
-      'A prova definitiva de que a aluna foi apagada dos registros públicos!'
-
-    );
-
+    this.openLedgerBookModal();
     this.addClue({
-
       id: 'clue_altered_ledger',
-
       title: 'A Página 42 Arrancada',
-
       description: 'O livro de matrículas confirma o apagamento oficial e traz o aviso: "Ela não atravessou a porta sozinha."',
-
       location: 'Salão das Cinzas',
-
       date: 'Capítulo I'
-
     });
-
     this.checkPhase1Discovery();
+  }
 
+  examineStairPainting() {
+    if (this.audioSystem) this.audioSystem.playInteraction('crystal');
+    this.openInspectModal(
+      'A Guardiã do Horizonte Obscuro',
+      'Uma pintura a óleo barroca com moldura entalhada em ouro envelhecido. Ela retrata a torre leste da Academia Noctária sob uma névoa violeta espectral, com luas gêmeas e constelações arcanas refletidas em águas abissais.\\n\\nUma placa em latão diz: "Àqueles que buscam a verdade nos alicerces mais profundos: a luz é apenas a sombra da memória."',
+      'Quadro decorativo da galeria de descida às fundações da academia.'
+    );
+  }
+
+  openLedgerBookModal() {
+    if (this.audioSystem) {
+      try { this.audioSystem.playInteraction('paper'); } catch (e) {}
+    }
+    const existing = document.getElementById('ledgerBookModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ledgerBookModal';
+    overlay.className = 'ledger-modal-overlay';
+
+    let currentPage = 1;
+
+    const renderBookContent = () => {
+      if (currentPage === 1) {
+        return `
+          <div class="ledger-spread">
+            <div class="ledger-page left-page">
+              <div class="page-header-ornament">❖ ACADEMIA NOCTÁRIA ❖</div>
+              <div class="page-title-ledger">REGISTRO DE MATRÍCULAS — ANO 1892</div>
+              <div class="matricula-entry">
+                <span class="mat-num">№ 040</span>
+                <span class="mat-name">Cassian Vance</span>
+                <span class="mat-status">Apto — Transmutação Arcana</span>
+              </div>
+              <div class="matricula-entry">
+                <span class="mat-num">№ 041</span>
+                <span class="mat-name">Elias Crowe</span>
+                <span class="mat-status">Apto — Alquimia & Glifos</span>
+              </div>
+              <div class="folio-seal">
+                <div class="seal-stamp">SELADO PELO CONSELHO</div>
+              </div>
+              <div class="page-number-folio">Folio XLVI — 41</div>
+            </div>
+
+            <div class="ledger-page right-page torn-edge-folio">
+              <div class="torn-notice-badge">REGISTRO DESTRUIDO</div>
+              <div class="torn-stub">
+                <div class="mat-num">№ 042</div>
+                <div class="torn-rip-visual">
+                  <div class="rip-jagged"></div>
+                  <div class="rip-fibers">[ FOLHA ARRANCADA À FORÇA RENTE À LOMBADA ]</div>
+                </div>
+              </div>
+
+              <div class="clue-tucked-note">
+                <div class="wax-drop"></div>
+                <div class="folded-note-teaser">
+                  <span class="note-pin-icon">📜</span>
+                  <div class="note-preview-text">
+                    <strong>Bilhete Secreto Descoberto na Dobra:</strong>
+                    <em>"Ela não atravessou a porta sozinha..."</em>
+                  </div>
+                  <button type="button" id="btnUnfoldSecret" class="btn-unfold-action">Examinar Bilhete Revelado ➔</button>
+                </div>
+              </div>
+
+              <div class="page-number-folio">Folio XLVI — [ARRANCADO]</div>
+            </div>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="ledger-secret-letter-view">
+            <div class="parchment-clue-scroll">
+              <div class="scroll-wax-seal">⚜</div>
+              <h2 class="parchment-headline">Anotação Oculta na Fresta da Lombada</h2>
+              <div class="parchment-handwriting">
+                <p>“Ela não atravessou a porta sozinha.</p>
+                <p>Quem apagou o registro 42 conhecia os selos das Três Chaves e temia a verdade nascida nas profundezas.</p>
+                <p>Se você procura respostas sobre a desaparecida, não confie no silêncio da Diretora Morgana. As corujas de bronze sempre vigiam.”</p>
+              </div>
+              <div class="parchment-signature">— Um amigo esquecido nos arquivos</div>
+              <div class="parchment-actions">
+                <button type="button" id="btnBackToLedger" class="btn-parchment-nav">◄ Voltar ao Livro de Matrículas</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    };
+
+    overlay.innerHTML = `
+      <div class="ledger-modal-box">
+        <div class="ledger-modal-header">
+          <div class="ledger-title-group">
+            <span class="book-icon-badge">📖</span>
+            <div>
+              <h3>Livro de Matrículas Oficial de Noctária</h3>
+              <p class="ledger-subtitle">Tomo secular encadernado em couro negro e fechos de latão</p>
+            </div>
+          </div>
+          <div class="ledger-header-shortcuts">
+            <span class="shortcut-tag"><kbd>P</kbd> Folhear</span>
+            <span class="shortcut-tag"><kbd>F</kbd> ou <kbd>ESC</kbd> Fechar</span>
+            <button type="button" class="ledger-close-btn" id="btnCloseLedger" title="Fechar [F]">&times;</button>
+          </div>
+        </div>
+
+        <div class="ledger-stage" id="ledgerStageContainer">
+          ${renderBookContent()}
+        </div>
+
+        <div class="ledger-modal-footer">
+          <div class="ledger-hints">
+            <span>✦ <strong>Pista Chave:</strong> Registro № 042 foi extirpado para ocultar a identidade da aluna desaparecida.</span>
+          </div>
+          <div class="ledger-buttons">
+            <button type="button" id="btnFlipPage" class="ledger-nav-btn">
+              Examinar Bilhete Escondido [P] ➔
+            </button>
+            <button type="button" class="primary-btn" id="btnConfirmLedger">Guardar e Fechar [F]</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Garantir que o ponteiro do mouse seja liberado e fique visível para interagir com o livro
+    if (document.pointerLockElement) {
+      document.exitPointerLock?.();
+    }
+
+    let isClosing = false;
+    const closeModal = () => {
+      if (isClosing) return;
+      isClosing = true;
+      window.removeEventListener('keydown', onLedgerKeyDown);
+      if (this.audioSystem) {
+        try { this.audioSystem.playInteraction('paper'); } catch (e) {}
+      }
+      overlay.classList.add('ledger-fade-out');
+      setTimeout(() => overlay.remove(), 260);
+    };
+
+    const flipTo = (page) => {
+      if (this.audioSystem) {
+        try { this.audioSystem.playInteraction('paper'); } catch (e) {}
+      }
+      const stage = document.getElementById('ledgerStageContainer');
+      const flipBtn = document.getElementById('btnFlipPage');
+      if (stage) {
+        stage.classList.add('page-roll-animation');
+        setTimeout(() => {
+          currentPage = page;
+          stage.innerHTML = renderBookContent();
+          if (flipBtn) {
+            flipBtn.textContent = currentPage === 1 ? 'Examinar Bilhete Escondido [P] ➔' : '◄ Ver Páginas do Tomo [P]';
+          }
+          stage.classList.remove('page-roll-animation');
+          attachListeners();
+        }, 240);
+      }
+    };
+
+    const onLedgerKeyDown = (e) => {
+      const key = e.key.toLowerCase();
+      if (key === 'f' || key === 'escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+      } else if (key === 'p' || key === 'arrowright' || key === 'arrowleft') {
+        e.preventDefault();
+        e.stopPropagation();
+        flipTo(currentPage === 1 ? 2 : 1);
+      }
+    };
+
+    window.addEventListener('keydown', onLedgerKeyDown);
+
+    const attachListeners = () => {
+      const closeBtn = document.getElementById('btnCloseLedger');
+      const confirmBtn = document.getElementById('btnConfirmLedger');
+      const flipBtn = document.getElementById('btnFlipPage');
+      const unfoldBtn = document.getElementById('btnUnfoldSecret');
+      const backBtn = document.getElementById('btnBackToLedger');
+
+      if (closeBtn) closeBtn.onclick = closeModal;
+      if (confirmBtn) confirmBtn.onclick = closeModal;
+
+      if (flipBtn) {
+        flipBtn.onclick = () => flipTo(currentPage === 1 ? 2 : 1);
+      }
+      if (unfoldBtn) {
+        unfoldBtn.onclick = () => flipTo(2);
+      }
+      if (backBtn) {
+        backBtn.onclick = () => flipTo(1);
+      }
+    };
+
+    attachListeners();
   }
 
 
@@ -5024,6 +5305,25 @@ window.addEventListener('DOMContentLoaded', () => {
             }, 100);
           } else {
             dialogueText.click();
+          }
+        }
+      }
+
+      // Tecla E para interagir com o objeto/livro/hotspot sob o cursor ou ativo
+      if (key === 'E') {
+        const activeModal = document.querySelector('.modal-overlay, .modal-backdrop');
+        const activeDialogue = document.querySelector('.dialogue-overlay');
+        if (!activeModal && !activeDialogue) {
+          if (game && game.activeCorridor3D) {
+            e.preventDefault();
+            game.activeCorridor3D.interactWithNearbyObject();
+            return;
+          }
+          const hoveredHotspot = document.querySelector('.hotspot:hover') || document.querySelector('.hotspot.hotspot-active') || document.querySelector('.hotspot');
+          if (hoveredHotspot) {
+            e.preventDefault();
+            hoveredHotspot.click();
+            return;
           }
         }
       }
