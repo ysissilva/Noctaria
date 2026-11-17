@@ -498,12 +498,18 @@ body, html {
 .topbar-location {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+}
+
+.topbar-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .loc-icon {
   color: var(--color-luminous-purple);
-  font-size: 1.2rem;
+  font-size: 1.4rem;
 }
 
 .loc-name {
@@ -512,6 +518,95 @@ body, html {
   letter-spacing: 0.1em;
   color: var(--color-lunar-white);
   font-weight: 600;
+  line-height: 1.2;
+}
+
+.loc-category-badge {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-aged-silver);
+  background: rgba(165, 138, 232, 0.12);
+  border: 1px solid rgba(165, 138, 232, 0.25);
+  padding: 2px 8px;
+  border-radius: 3px;
+  align-self: flex-start;
+  line-height: 1.2;
+}
+
+/* Atmospheric Banner / Ambient Bar below Topbar */
+.scene-ambient-bar {
+  position: relative;
+  width: 100%;
+  min-height: 44px;
+  background: linear-gradient(180deg, rgba(8, 12, 29, 0.88) 0%, rgba(8, 12, 29, 0.6) 100%);
+  border-bottom: 1px solid rgba(183, 183, 200, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 24px;
+  z-index: 15;
+  backdrop-filter: blur(8px);
+  gap: 16px;
+}
+
+.ambient-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ambient-status .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-luminous-purple);
+  box-shadow: 0 0 8px var(--color-luminous-purple);
+  flex-shrink: 0;
+}
+
+.ambient-text {
+  font-family: var(--font-text);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--color-lunar-white);
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scene-actions-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.scene-pill-btn {
+  background: rgba(16, 23, 47, 0.75);
+  border: 1px solid rgba(183, 183, 200, 0.25);
+  color: var(--color-aged-silver);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+}
+
+.scene-pill-btn:hover {
+  background: rgba(36, 59, 112, 0.85);
+  color: #fff;
+  border-color: var(--color-luminous-purple);
+  box-shadow: 0 0 10px rgba(165, 138, 232, 0.35);
 }
 
 .topbar-nav {
