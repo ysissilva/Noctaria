@@ -2318,3 +2318,98 @@ body, html {
   object-fit: cover;
   display: block;
 }
+
+/* ==========================================================================
+   CINEMATIC CHAPTER INTRO OVERLAY
+   ========================================================================== */
+.chapter-intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: radial-gradient(circle at 50% 45%, rgba(10, 15, 34, 0.78) 0%, rgba(4, 6, 15, 0.96) 100%);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: chapterIntroFadeIn 0.7s ease forwards;
+}
+
+.chapter-intro-overlay.chapter-intro-fade-out {
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
+}
+
+@keyframes chapterIntroFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.chapter-intro-card {
+  max-width: 680px;
+  width: 100%;
+  text-align: center;
+  padding: 46px 40px;
+  background: linear-gradient(180deg, rgba(11, 16, 38, 0.92) 0%, rgba(5, 8, 20, 0.96) 100%);
+  border: 1px solid rgba(165, 138, 232, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.9), 0 0 45px rgba(83, 118, 200, 0.22);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: chapterCardRise 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes chapterCardRise {
+  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.chapter-intro-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.24em;
+  color: var(--color-luminous-purple);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.chapter-intro-title {
+  font-family: var(--font-title);
+  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+  letter-spacing: 0.18em;
+  color: #fff;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 18px rgba(178, 154, 240, 0.45);
+}
+
+.chapter-intro-subtitle {
+  font-family: var(--font-title);
+  font-size: clamp(1.1rem, 2.2vw, 1.45rem);
+  letter-spacing: 0.14em;
+  color: var(--color-aged-silver);
+  font-weight: 500;
+}
+
+.chapter-intro-divider {
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-luminous-purple), transparent);
+  margin: 22px 0;
+}
+
+.chapter-intro-text {
+  font-family: var(--font-text);
+  font-size: 1.08rem;
+  line-height: 1.85;
+  color: var(--color-lunar-white);
+  margin-bottom: 30px;
+  max-width: 54ch;
+}
+
+.chapter-intro-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 28px;
+}

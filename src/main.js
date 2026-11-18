@@ -197,47 +197,51 @@ class NoctariaGame {
       };
     } else if (current === 'phase_1') {
       this.flags.phase1Completed = true;
+      this.flags.ch2MissionStage = 1;
       nextChapter = 'phase_2';
-      title = 'Fase 1 Concluída';
-      summary = 'Você comprovou que Seraphine Ashford existiu e foi deliberadamente arrancada da história. Acesso à Biblioteca Velada concedido!';
+      title = 'Capítulo 1 Concluído — O Nome que Não Existe';
+      summary = 'Você comprovou que Seraphine Ashford existiu e encontrou referências a experimentos ligados à memória na antiga Sala de Alquimia.';
       this.state.activeQuest = {
-        id: 'quest_phase_2',
-        name: 'Fase 2 — A Biblioteca Velada',
-        description: 'Reúna as três páginas do manuscrito rasgado nos arquivos proibidos e aprenda o feitiço Revelare.',
+        id: 'quest_ch2_m1',
+        name: 'Capítulo 2 • Missão 1 — A Sala Esquecida',
+        description: 'Investigue a antiga Sala de Alquimia para encontrar registros dos experimentos de memória de Seraphine.',
         currentStep: 0,
         steps: [
-          { text: 'Converse com Madam Vespera sobre as Mil Portas.', completed: false },
-          { text: 'Encontre os 3 fragmentos do manuscrito na Biblioteca.', completed: false },
-          { text: 'Decifre a ordem dos símbolos arcanos para aprender REVELARE.', completed: false }
+          { text: 'Examinar os livros antigos de alquimia.', completed: false },
+          { text: 'Encontrar uma fórmula incompleta nos pergaminhos.', completed: false },
+          { text: 'Descobrir uma anotação assinada por Seraphine.', completed: false }
         ],
         status: 'active'
       };
     } else if (current === 'phase_2') {
       this.flags.phase2Completed = true;
-      nextChapter = 'phase_3';
-      title = 'Fase 2 Concluída';
-      summary = 'Você dominou o feitiço REVELARE! O Laboratório de Alquimia das Sombras está aberto para sua pesquisa.';
+      this.flags.phase3Completed = true;
+      if (!this.state.unlockedScenes.includes('library')) {
+        this.state.unlockedScenes.push('library');
+      }
+      nextChapter = 'phase_4';
+      title = 'Capítulo 2 Concluído — Fragmentos de Memória';
+      summary = 'A Poção da Lembrança revelou uma visão decisiva de Seraphine: antes de desaparecer, ela confiou um objeto sagrado a Elias Crowe no Dormitório da Noite.';
       this.state.activeQuest = {
-        id: 'quest_phase_3',
-        name: 'Fase 3 — A Poção da Lembrança',
-        description: 'Colete os 4 ingredientes e destile a Poção da Lembrança com o Prof. Octavian e Celeste.',
+        id: 'quest_phase_4',
+        name: 'Capítulo 3 — A Chave de Elias',
+        description: 'Investigue o Dormitório da Noite, encontre o diário dos Crowe e descubra a chave deixada com Elias.',
         currentStep: 0,
         steps: [
-          { text: 'Converse com o Prof. Octavian Wren sobre a fórmula.', completed: false },
-          { text: 'Colete os 4 reagentes alquímicos no laboratório.', completed: false },
-          { text: 'Prepare a poção na ordem correta no caldeirão.', completed: false },
-          { text: 'Decida quem deve ingerir o elixir para resgatar a visão de Seraphine.', completed: false }
+          { text: 'Encontre a chave de ferro escondida na lareira do dormitório.', completed: false },
+          { text: 'Abra o baú familiar e leia o diário secreto de Elias.', completed: false },
+          { text: 'Confronte ou demonstre confiança a Elias para obter a Primeira Chave Dimensional.', completed: false }
         ],
         status: 'active'
       };
     } else if (current === 'phase_3') {
       this.flags.phase3Completed = true;
       nextChapter = 'phase_4';
-      title = 'Fase 3 Concluída';
-      summary = 'A visão revelou Seraphine diante da Porta das Estrelas! Agora é hora de desvendar a ligação de Elias Crowe com a academia.';
+      title = 'Arquivo Concluído';
+      summary = 'Você dominou os segredos da Biblioteca Velada! Agora é hora de desvendar a ligação de Elias Crowe com a academia.';
       this.state.activeQuest = {
         id: 'quest_phase_4',
-        name: 'Fase 4 — O Segredo de Elias',
+        name: 'Capítulo 3 — A Chave de Elias',
         description: 'Investigue os dormitórios, encontre o diário dos Crowe e obtenha a Primeira Chave Dimensional.',
         currentStep: 0,
         steps: [
@@ -569,6 +573,11 @@ class NoctariaGame {
 
     this.initLivingAtmosphere();
     this.renderSceneInteractiveElements();
+
+    // Introdução cinematográfica automática ao entrar no Capítulo 2 pela primeira vez
+    if (this.state.currentScene === 'alchemy_lab' && this.state.currentChapter === 'phase_2' && !this.flags.chapter2IntroSeen) {
+      this.renderChapter2Intro();
+    }
   }
 
   // --- ATMOSFERA VIVA (PARTÍCULAS DE POEIRA ARCANA & BRILHOS) ---
@@ -754,59 +763,68 @@ class NoctariaGame {
       }
     }
 
-    // 4. FASE 3: LABORATÓRIO DE ALQUIMIA
+    // CAPÍTULO 2: FRAGMENTOS DE MEMÓRIA — SALA DE ALQUIMIA
     else if (scene === 'alchemy_lab') {
-      // Prof. Octavian Wren
-      this.createHotspot(layer, '34%', '62%', 'Prof. Octavian Wren', () => {
-        this.startDialogue('octavian_alchemy', 'start');
-      });
+      // Octavian Wren (junto ao candelabro e armário esquerdo)
+      this.createHotspot(layer, '24%', '58%', 'Octavian Wren', () => {
+        if ((this.flags.ch2MissionStage || 1) < 2 && !this.flags.ch2FormulaFound) {
+          this.startDialogue('chapter2_intro_octavian', 'start');
+        } else {
+          this.startDialogue('octavian_alchemy', 'start');
+        }
+      }, '#f7b267');
 
-      // Celeste Veyra
-      this.createHotspot(layer, '66%', '62%', 'Celeste Veyra', () => {
-        this.startDialogue('celeste_alchemy', 'start');
-      });
+      // Missão 1 — Livros antigos de alquimia (sobre a mesa direita)
+      this.createHotspot(layer, '86%', '76%', 'Livros Antigos de Alquimia', () => {
+        this.examineCh2AlchemyBooks();
+      }, '#a58ae8');
 
-      // O Grande Caldeirão
-      this.createHotspot(layer, '50%', '75%', 'Caldeirão das Lembranças', () => {
+      // Missão 1 — Pergaminho com fórmula incompleta (mesa central)
+      this.createHotspot(layer, '63%', '75%', 'Pergaminho de Fórmula Incompleta', () => {
+        this.examineCh2IncompleteFormula();
+      }, '#a58ae8');
+
+      // Missão 1 — Anotação assinada por Seraphine (balança e instrumentos à esquerda)
+      this.createHotspot(layer, '41%', '60%', 'Instrumentos Antigos e Anotação', () => {
+        this.examineCh2SeraphineNote();
+      }, '#a58ae8');
+
+      // Missão 3 — Alambique / Bancada de Destilação
+      this.createHotspot(layer, '58%', '55%', 'Alambique das Lembranças', () => {
         this.openAlchemyPuzzle();
       }, '#4ef0c4');
 
-      // Prateleiras de reagentes
+      // Missão 2 — Armários Antigos e Estantes de Frascos (4 ingredientes)
       if (!this.flags.ingredientLunarDew) {
-        this.createHotspot(layer, '18%', '36%', 'Frasco: Orvalho Lunar', () => {
-          this.flags.ingredientLunarDew = true;
-          this.showNotification('Coletado: Orvalho Lunar Destilado!', 'item');
-          this.checkPhase3Reagents();
-          this.renderSceneInteractiveElements();
-        });
+        this.createHotspot(layer, '33%', '44%', 'Armário de Madeira Escura', () => {
+          this.inspectAlchemyCabinet('lunarDew');
+        }, '#5376c8');
       }
       if (!this.flags.ingredientAshRoot) {
-        this.createHotspot(layer, '26%', '36%', 'Frasco: Raiz de Mandrágora', () => {
-          this.flags.ingredientAshRoot = true;
-          this.showNotification('Coletado: Raiz de Mandrágora de Cinzas!', 'item');
-          this.checkPhase3Reagents();
-          this.renderSceneInteractiveElements();
-        });
+        this.createHotspot(layer, '48%', '38%', 'Estante Azul da Janela', () => {
+          this.inspectAlchemyCabinet('ashRoot');
+        }, '#5376c8');
       }
       if (!this.flags.ingredientNightPhoenix) {
-        this.createHotspot(layer, '74%', '36%', 'Frasco: Cinza de Fênix', () => {
-          this.flags.ingredientNightPhoenix = true;
-          this.showNotification('Coletado: Cinza de Fênix Noturna!', 'item');
-          this.checkPhase3Reagents();
-          this.renderSceneInteractiveElements();
-        });
+        this.createHotspot(layer, '69%', '39%', 'Estante de Frascos Violetas', () => {
+          this.inspectAlchemyCabinet('nightPhoenix');
+        }, '#5376c8');
       }
       if (!this.flags.ingredientEther) {
-        this.createHotspot(layer, '82%', '36%', 'Frasco: Éter Rúnico', () => {
-          this.flags.ingredientEther = true;
-          this.showNotification('Coletado: Éter Rúnico Puro!', 'item');
-          this.checkPhase3Reagents();
-          this.renderSceneInteractiveElements();
-        });
+        this.createHotspot(layer, '88%', '39%', 'Armário Superior Direito', () => {
+          this.inspectAlchemyCabinet('ether');
+        }, '#5376c8');
       }
 
-      if (this.flags.phase3Completed) {
-        this.createHotspot(layer, '88%', '75%', 'Passagem para os Dormitórios', () => {
+      // Missão 4 — Fragmento de Memória manifestado após ativar a poção
+      if (this.flags.ch2PotionActivated && !this.flags.ch2FinalDiscoveryLogged) {
+        this.createHotspot(layer, '50%', '46%', 'Fragmento de Memória de Seraphine', () => {
+          this.startDialogue('ch2_memory_investigation', 'start');
+        }, '#4ef0c4');
+      }
+
+      if (this.flags.phase2Completed || this.flags.phase3Completed) {
+        this.createHotspot(layer, '14%', '66%', 'Seguir para A Chave de Elias', () => {
           this.changeChapter('phase_4');
         }, '#4ef0c4');
       }
@@ -1157,11 +1175,317 @@ class NoctariaGame {
     }
   }
 
-  checkPhase3Reagents() {
-    if (this.flags.ingredientLunarDew && this.flags.ingredientAshRoot && this.flags.ingredientNightPhoenix && this.flags.ingredientEther) {
-      this.updateQuestStep(1);
-      this.showNotification('✦ Todos os 4 reagentes foram reunidos! Aproxime-se do Caldeirão das Lembranças. ✦', 'quest');
+  // --- CAPÍTULO 2: FRAGMENTOS DE MEMÓRIA (INTRO, MISSÕES 1 A 4, CONCLUSÃO) ---
+  renderChapter2Intro() {
+    if (document.getElementById('chapter-intro-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'chapter-intro-overlay';
+    overlay.className = 'chapter-intro-overlay';
+    overlay.innerHTML = `
+      <div class="chapter-intro-card">
+        <span class="chapter-intro-eyebrow">NOCTÁRIA • CONTINUIDADE NARRATIVA</span>
+        <h2 class="chapter-intro-title">CAPÍTULO II</h2>
+        <h3 class="chapter-intro-subtitle">FRAGMENTOS DE MEMÓRIA</h3>
+        <div class="chapter-intro-divider"></div>
+        <p class="chapter-intro-text">
+          Após confirmar que o nome de Seraphine Ashford foi apagado dos registros do Salão das Cinzas, você descobriu referências a experimentos ligados à memória humana. Os vestígios apontam para a antiga Sala de Alquimia da academia — onde velas douradas e reflexos azulados ainda guardam segredos que alguém tentou trancar no silêncio.
+        </p>
+        <button class="btn-gothic btn-primary chapter-intro-btn" id="btn-enter-ch2">
+          <span>Adentrar a Sala de Alquimia</span>
+          <span class="btn-icon">✦</span>
+        </button>
+      </div>
+    `;
+    this.root.appendChild(overlay);
+
+    document.getElementById('btn-enter-ch2').onclick = () => {
+      this.flags.chapter2IntroSeen = true;
+      this.saveGame();
+      overlay.classList.add('chapter-intro-fade-out');
+      setTimeout(() => {
+        overlay.remove();
+        this.startDialogue('chapter2_intro_octavian', 'start');
+      }, 450);
+    };
+  }
+
+  examineCh2AlchemyBooks() {
+    this.flags.ch2BooksExamined = true;
+    this.addClue({
+      id: 'clue_ch2_alchemy_books',
+      title: 'Tratados de Transmutação Mnemônica',
+      description: 'Os livros antigos da Sala de Alquimia detalham elixires capazes de restaurar lembranças arrancadas pelo véu de Noctária — e mencionam o encantamento REVELARE.',
+      location: 'Sala de Alquimia',
+      date: 'Capítulo II'
+    });
+    if (!this.state.player.spells.includes('revelare')) {
+      this.learnSpell('revelare', false);
     }
+    if ((this.flags.ch2MissionStage || 1) === 1) {
+      this.updateQuestStep(0);
+    }
+    this.openInspectModal(
+      'Livros Antigos de Alquimia',
+      'Volumes encadernados em couro envelhecido repousam sobre a madeira escura. Nas margens de um tratado sobre memória e tempo, alguém sublinhou passagens inteiras a tinta violeta:\n\n“Quando a academia apaga um nome, a lembrança não morre — ela se dissolve no ar da sala onde foi vivida. Apenas um elixir de ancoragem temporal e o olhar de REVELARE podem condensá-la novamente.”',
+      'Pista registrada no diário. Os tratados confirmam que experimentos de memória foram conduzidos nesta sala.'
+    );
+    this.checkCh2Mission1Complete();
+    this.renderSceneInteractiveElements();
+  }
+
+  examineCh2IncompleteFormula() {
+    this.flags.ch2FormulaFound = true;
+    this.addInventoryItem({
+      id: 'incomplete_memory_formula',
+      name: 'Fórmula Incompleta da Lembrança',
+      icon: '📜',
+      description: 'Pergaminho alquímico antigo com quatro espaços de reagentes raspados e instruções parciais sobre destilação de memórias.'
+    });
+    this.addClue({
+      id: 'clue_ch2_incomplete_formula',
+      title: 'A Fórmula Incompleta',
+      description: 'O pergaminho sobre a bancada descreve a Poção da Lembrança, mas os nomes dos quatro reagentes foram parcialmente apagados.',
+      location: 'Sala de Alquimia',
+      date: 'Capítulo II'
+    });
+    if ((this.flags.ch2MissionStage || 1) === 1) {
+      this.updateQuestStep(1);
+    }
+    this.openInspectModal(
+      'Pergaminho com Fórmula Incompleta',
+      'Desenrolado sob a luz das velas, o pergaminho exibe diagramas de alambiques e círculos alquímicos precisos:\n\n“Para despertar o eco congelado: 1º [rasurado], 2º [rasurado], 3º [rasurado], 4º [rasurado]. Não alterar a ordem sob risco de colapso mnemônico.”\n\nAlguém interrompeu esta fórmula às pressas.',
+      'A fórmula incompleta foi guardada em seu inventário e registrada no diário.'
+    );
+    this.checkCh2Mission1Complete();
+  }
+
+  examineCh2SeraphineNote() {
+    this.flags.ch2SeraphineNoteFound = true;
+    this.addClue({
+      id: 'clue_ch2_seraphine_note',
+      title: 'Anotação Assinada por Seraphine',
+      description: 'Bilhete escondido sob a balança de latão: “Se minhas memórias forem arrancadas pelas badaladas, a resposta repousa na destilação do tempo. — Seraphine Ashford.”',
+      location: 'Sala de Alquimia',
+      date: 'Capítulo II'
+    });
+    if ((this.flags.ch2MissionStage || 1) === 1) {
+      this.updateQuestStep(2);
+    }
+    this.openInspectModal(
+      'Anotação Oculta sob os Instrumentos',
+      'Preso sob a base da balança antiga de latão, você encontra um fragmento de papel dobrado com caligrafia firme e apressada:\n\n“Octavian sabe dos riscos, mas a Diretoria vigia cada passo. Dividi os reagentes pelos armários. Se minhas memórias forem arrancadas pelas badaladas, a resposta repousa na destilação do tempo.\n— Seraphine Ashford”',
+      'Você comprovou que Seraphine conduziu os experimentos nesta sala!'
+    );
+    this.checkCh2Mission1Complete();
+  }
+
+  checkCh2Mission1Complete() {
+    if (
+      this.flags.ch2BooksExamined &&
+      this.flags.ch2FormulaFound &&
+      this.flags.ch2SeraphineNoteFound &&
+      (this.flags.ch2MissionStage || 1) < 2
+    ) {
+      if (this.state.activeQuest && this.state.activeQuest.id === 'quest_ch2_m1') {
+        this.state.activeQuest.status = 'completed';
+        this.state.completedQuests.push({ ...this.state.activeQuest });
+      }
+      this.flags.ch2MissionStage = 2;
+      this.state.activeQuest = {
+        id: 'quest_ch2_m2',
+        name: 'Capítulo 2 • Missão 2 — A Fórmula Perdida',
+        description: 'Converse com Octavian Wren para descobrir os ingredientes faltantes e investigue os armários da Sala de Alquimia.',
+        currentStep: 0,
+        steps: [
+          { text: 'Conversar com Octavian Wren.', completed: Boolean(this.flags.octavianTalked) },
+          { text: 'Descobrir quais ingredientes estão faltando.', completed: Boolean(this.flags.ch2MissingIngredientsKnown) },
+          { text: 'Investigar os armários antigos da sala.', completed: Boolean(this.flags.ch2CabinetsInvestigated) },
+          { text: 'Encontrar todos os ingredientes necessários.', completed: false }
+        ],
+        status: 'active'
+      };
+      this.saveGame();
+      this.showNotification('✦ Missão 1 concluída! Missão 2 — A Fórmula Perdida iniciada. Converse com Octavian Wren. ✦', 'quest');
+      this.checkCh2Mission2Complete();
+    }
+  }
+
+  onOctavianRevealedFormula() {
+    this.flags.octavianTalked = true;
+    this.flags.ch2MissingIngredientsKnown = true;
+    if ((this.flags.ch2MissionStage || 1) === 2) {
+      this.updateQuestStep(0);
+      this.updateQuestStep(1);
+    }
+    this.addClue({
+      id: 'clue_ch2_octavian_ingredients',
+      title: 'Os Quatro Reagentes da Lembrança',
+      description: 'Octavian Wren revelou a sequência exata: Orvalho Lunar Destilado, Raiz de Mandrágora de Cinzas, Cinza de Fênix Noturna e Éter Rúnico Puro.',
+      location: 'Sala de Alquimia',
+      date: 'Capítulo II'
+    });
+    this.showNotification('Objetivo atualizado: Investigue os armários antigos para reunir os 4 ingredientes.', 'quest');
+    this.checkCh2Mission2Complete();
+  }
+
+  inspectAlchemyCabinet(reagentKey) {
+    if ((this.flags.ch2MissionStage || 1) < 2) {
+      this.openInspectModal(
+        'Armário Antigo de Madeira Escura',
+        'Os armários guardam dezenas de frascos rotulados com símbolos alquímicos arcaicos. Sem saber quais componentes pertencem à fórmula de Seraphine, abrir os recipientes ao acaso seria arriscado.',
+        'Conclua a investigação inicial sobre a mesa antes de procurar reagentes.'
+      );
+      return;
+    }
+
+    if (!this.flags.ch2MissingIngredientsKnown) {
+      this.openInspectModal(
+        'Frascos Alquímicos Selados',
+        'Há frascos luminosos em tons de azul, âmbar e violeta por trás das portas de vidro, mas você ainda não identificou quais ingredientes faltam na fórmula incompleta.',
+        'Converse com Octavian Wren para descobrir os reagentes necessários.'
+      );
+      return;
+    }
+
+    this.flags.ch2CabinetsInvestigated = true;
+    if (this.flags.ch2MissionStage === 2) {
+      this.updateQuestStep(2);
+    }
+
+    const map = {
+      lunarDew: {
+        flag: 'ingredientLunarDew',
+        item: { id: 'lunar_dew', name: 'Orvalho Lunar Destilado', icon: '💧', description: 'Essência azulada colhida sob a lua cheia.' },
+        msg: 'Você destranca o armário de madeira escura e encontra o frasco cintilante de Orvalho Lunar Destilado!'
+      },
+      ashRoot: {
+        flag: 'ingredientAshRoot',
+        item: { id: 'ash_root', name: 'Raiz de Mandrágora de Cinzas', icon: '🌿', description: 'Raiz seca que ancora fragmentos de memória.' },
+        msg: 'Na estante banhada pela luz azul da janela, você recolhe um recipiente com Raiz de Mandrágora de Cinzas!'
+      },
+      nightPhoenix: {
+        flag: 'ingredientNightPhoenix',
+        item: { id: 'night_phoenix', name: 'Cinza de Fênix Noturna', icon: '🔥', description: 'Cinza violeta incandescente que desperta lembranças.' },
+        msg: 'Entre os frascos violetas você encontra o pó luminoso de Cinza de Fênix Noturna!'
+      },
+      ether: {
+        flag: 'ingredientEther',
+        item: { id: 'rune_ether', name: 'Éter Rúnico Puro', icon: '✨', description: 'Solvente límpido que estabiliza o elixir.' },
+        msg: 'No armário superior direito repousa o frasco selado de Éter Rúnico Puro!'
+      }
+    };
+
+    const entry = map[reagentKey];
+    if (entry && !this.flags[entry.flag]) {
+      this.flags[entry.flag] = true;
+      this.addInventoryItem(entry.item);
+      this.showNotification(entry.msg, 'item');
+      this.checkCh2Mission2Complete();
+      this.renderSceneInteractiveElements();
+    }
+  }
+
+  checkCh2Mission2Complete() {
+    const hasAll =
+      this.flags.ingredientLunarDew &&
+      this.flags.ingredientAshRoot &&
+      this.flags.ingredientNightPhoenix &&
+      this.flags.ingredientEther;
+
+    if (
+      (this.flags.ch2MissionStage || 1) === 2 &&
+      this.flags.octavianTalked &&
+      this.flags.ch2MissingIngredientsKnown &&
+      this.flags.ch2CabinetsInvestigated &&
+      hasAll
+    ) {
+      this.updateQuestStep(3);
+      if (this.state.activeQuest && this.state.activeQuest.id === 'quest_ch2_m2') {
+        this.state.activeQuest.status = 'completed';
+        this.state.completedQuests.push({ ...this.state.activeQuest });
+      }
+      this.flags.ch2MissionStage = 3;
+      this.state.activeQuest = {
+        id: 'quest_ch2_m3',
+        name: 'Capítulo 2 • Missão 3 — A Poção da Lembrança',
+        description: 'Organize os ingredientes no alambique seguindo as instruções do manuscrito e ative a Poção da Lembrança.',
+        currentStep: 0,
+        steps: [
+          { text: 'Organizar os ingredientes na bancada alquímica.', completed: false },
+          { text: 'Seguir as instruções do manuscrito.', completed: false },
+          { text: 'Completar o experimento no alambique.', completed: false },
+          { text: 'Ativar a Poção da Lembrança.', completed: false }
+        ],
+        status: 'active'
+      };
+      this.saveGame();
+      this.showNotification('✦ Missão 2 concluída! Missão 3 — A Poção da Lembrança iniciada. Aproxime-se do Alambique! ✦', 'quest');
+    }
+  }
+
+  activateMemoryPotion() {
+    this.flags.ch2PotionActivated = true;
+    this.flags.potionAdministered = true;
+    this.flags.memoryVisionSeen = true;
+    if ((this.flags.ch2MissionStage || 1) === 3) {
+      this.updateQuestStep(3);
+      if (this.state.activeQuest && this.state.activeQuest.id === 'quest_ch2_m3') {
+        this.state.activeQuest.status = 'completed';
+        this.state.completedQuests.push({ ...this.state.activeQuest });
+      }
+      this.flags.ch2MissionStage = 4;
+      this.state.activeQuest = {
+        id: 'quest_ch2_m4',
+        name: 'Capítulo 2 • Missão 4 — O Último Registro',
+        description: 'Investigue o fragmento de memória manifestado na Sala de Alquimia e descubra a pista deixada por Seraphine.',
+        currentStep: 0,
+        steps: [
+          { text: 'Investigar a lembrança revelada pela poção.', completed: false },
+          { text: 'Identificar o local mostrado na visão.', completed: false },
+          { text: 'Encontrar a nova pista ligada a Elias.', completed: false },
+          { text: 'Registrar a descoberta no diário.', completed: false }
+        ],
+        status: 'active'
+      };
+    }
+    this.saveGame();
+
+    const fx = document.createElement('div');
+    fx.className = 'spell-cast-fx';
+    fx.style.background = 'radial-gradient(circle, rgba(83,118,200,0.75) 0%, rgba(165,138,232,0.4) 55%, transparent 80%)';
+    this.root.appendChild(fx);
+    setTimeout(() => fx.remove(), 1400);
+
+    this.showNotification('✦ A Poção da Lembrança foi ativada! Um fragmento de memória de Seraphine surgiu na sala! ✦', 'quest');
+    this.renderSceneInteractiveElements();
+    setTimeout(() => {
+      this.startDialogue('ch2_memory_investigation', 'start');
+    }, 650);
+  }
+
+  completeChapter2FinalDiscovery() {
+    this.flags.ch2MemoryInvestigated = true;
+    this.flags.ch2LocationIdentified = true;
+    this.flags.ch2EliasClueFound = true;
+    this.flags.ch2FinalDiscoveryLogged = true;
+    this.addClue({
+      id: 'clue_ch2_elias_key_ref',
+      title: 'A Chave Confiada a Elias',
+      description: 'A lembrança de Seraphine mostrou o Dormitório da Noite e revelou uma chave de ferro com o brasão dos Crowe entregue a Elias antes do desaparecimento.',
+      location: 'Sala de Alquimia',
+      date: 'Capítulo II'
+    });
+    if ((this.flags.ch2MissionStage || 1) === 4) {
+      this.updateQuestStep(0);
+      this.updateQuestStep(1);
+      this.updateQuestStep(2);
+      this.updateQuestStep(3);
+    }
+    this.completeCurrentPhase();
+  }
+
+  checkPhase3Reagents() {
+    this.checkCh2Mission2Complete();
   }
 
   openManuscriptPuzzle() {
@@ -1302,10 +1626,14 @@ class NoctariaGame {
     }
 
     if (this.flags.potionBrewed) {
+      if (!this.flags.ch2PotionActivated) {
+        this.openPotionConsumptionChoice();
+        return;
+      }
       this.openInspectModal(
-        'Poção da Lembrança Pronta',
-        'O elixir brilha com uma tonalidade azul-cobalto luminescente. A poção já foi destilada com sucesso!',
-        'A visão sobre Seraphine e a Chave Dimensional já foi gravada em seu diário.'
+        'Poção da Lembrança Ativada',
+        'O elixir já foi destilado e ativado no alambique. Um fragmento de memória de Seraphine manifestou-se na Sala de Alquimia.',
+        'Investigue o Fragmento de Memória na sala para concluir o capítulo.'
       );
       return;
     }
@@ -1379,7 +1707,7 @@ class NoctariaGame {
     };
 
     document.getElementById('btn-alchemy-hint').onclick = () => {
-      alert('Celeste sussurra: "Primeiro a base líquida (Orvalho Lunar), depois a âncora de memórias (Raiz de Mandrágora), inflame o tempo (Cinza de Fênix) e estabilize com o Éter Rúnico!"');
+      alert('Instruções do Manuscrito: "Primeiro a base líquida (Orvalho Lunar), depois a âncora de memórias (Raiz de Mandrágora), inflame o tempo (Cinza de Fênix) e estabilize com o Éter Rúnico!"');
     };
 
     document.getElementById('btn-alchemy-brew').onclick = () => {
@@ -1393,6 +1721,8 @@ class NoctariaGame {
       const isCorrect = expected.every((val, idx) => val === actual[idx]);
 
       if (isCorrect) {
+        this.flags.ch2IngredientsOrganized = true;
+        this.flags.ch2InstructionsFollowed = true;
         this.flags.potionBrewed = true;
         this.addInventoryItem({
           id: 'memory_potion',
@@ -1401,11 +1731,18 @@ class NoctariaGame {
           image: '/assets/images/objects/potion.jpg',
           description: 'Um elixir brilhante capaz de reacender memórias que foram apagadas do tecido do tempo.'
         });
-        this.updateQuestStep(2);
+        if ((this.flags.ch2MissionStage || 1) === 3) {
+          this.updateQuestStep(0);
+          this.updateQuestStep(1);
+          this.updateQuestStep(2);
+        } else {
+          this.updateQuestStep(2);
+        }
+        this.saveGame();
         this.closeModal();
         this.openPotionConsumptionChoice();
       } else {
-        alert('O caldeirão ferveu em tom lamacento e emitiu cheiro de enxofre... A ordem dos ingredientes estava errada! Celeste rapidamente esvazia a mistura para evitar acidentes.');
+        alert('O alambique ferveu em tom turvo... A ordem dos ingredientes não corresponde ao manuscrito de Seraphine. Reorganize seguindo as instruções!');
         document.getElementById('btn-alchemy-reset').click();
       }
     };
@@ -1414,32 +1751,33 @@ class NoctariaGame {
   openPotionConsumptionChoice() {
     const html = `
       <div style="text-align:center; padding:10px 0;">
-        <div style="font-size:3rem; margin-bottom:12px;">🧪</div>
-        <h3 style="font-family:var(--font-title); font-size:1.4rem; color:var(--color-luminous-purple); margin-bottom:12px;">Quem Deve Ingerir a Poção da Lembrança?</h3>
+        <div style="font-size:2.6rem; margin-bottom:12px;">✦</div>
+        <h3 style="font-family:var(--font-title); font-size:1.4rem; color:var(--color-luminous-purple); margin-bottom:12px;">Ativar a Poção da Lembrança</h3>
         <p style="color:var(--color-lunar-white); font-size:1rem; margin-bottom:24px; line-height:1.6;">
-          O frasco vibra em suas mãos. Ingerir o elixir abrirá os olhos para as memórias impregnadas nas pedras de Noctária. Você deve beber pessoalmente ou pedir que Elias Crowe tome a poção?
+          O elixir azulado pulsa dentro do frasco de vidro. Ativá-lo condensará os ecos de Seraphine Ashford impregnados no ar da Sala de Alquimia. Como deseja ativar a reação?
         </p>
-        <div style="display:flex; flex-direction:column; gap:12px; max-width:480px; margin:0 auto;">
-          <button class="btn-gothic btn-primary" id="choice-drink-self">
-            <span>Beber Pessoalmente a Poção</span>
+        <div style="display:flex; flex-direction:column; gap:12px; max-width:500px; margin:0 auto;">
+          <button class="btn-gothic btn-primary" id="choice-activate-vapor">
+            <span>Ativar a Poção sobre o Alambique (Manifestar Lembrança)</span>
           </button>
-          <button class="btn-gothic" id="choice-drink-elias">
-            <span>Pedir que Elias Crowe Beba</span>
+          <button class="btn-gothic" id="choice-drink-self">
+            <span>Provar Uma Gota do Elixir (Visão Direta)</span>
           </button>
         </div>
       </div>
     `;
-    this.openModal('Decisão de Lembrança', html);
+    this.openModal('Experimento Concluído — Poção da Lembrança', html);
+
+    document.getElementById('choice-activate-vapor').onclick = () => {
+      this.state.player.choices.potionDrinker = 'vapor';
+      this.closeModal();
+      this.activateMemoryPotion();
+    };
 
     document.getElementById('choice-drink-self').onclick = () => {
       this.state.player.choices.potionDrinker = 'self';
-      this.showMemoryVision('Você bebe o líquido frio como a noite. Seus olhos são inundados por visões do passado: Seraphine Ashford corre desesperada pelos corredores, segurando uma chave de ébano e encarando a Porta das Estrelas com o mesmo selo da sua carta de convocação!');
-    };
-
-    document.getElementById('choice-drink-elias').onclick = () => {
-      this.state.player.choices.potionDrinker = 'elias';
-      this.state.player.relationships.elias += 2;
-      this.showMemoryVision('Elias hesita, mas bebe a poção por você. Ele cambaleia, segurando a cabeça, e exclama: "Eu me lembro agora! Minha família escondia a chave de ébano... e Seraphine me pediu para guardá-la antes de correr para a Porta das Estrelas!"');
+      this.closeModal();
+      this.activateMemoryPotion();
     };
   }
 

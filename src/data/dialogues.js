@@ -484,84 +484,224 @@ export const DIALOGUES = {
   },
 
   // =========================================================================
-  // FASE 3 — A POÇÃO DA LEMBRANÇA
+  // CAPÍTULO 2 — FRAGMENTOS DE MEMÓRIA (SALA DE ALQUIMIA)
   // =========================================================================
-  octavian_alchemy: {
+  chapter2_intro_octavian: {
     characterId: 'octavian',
     nodes: {
       start: {
-        text: 'Ah, o jovem estudante de passos cautelosos! Bem-vindo ao laboratório das transmutações psíquicas. Ouvi dizer que você decifrou o manuscrito na biblioteca. Você busca memórias que o tempo engoliu?',
+        text: 'Passos leves, iniciado... Poucos estudantes descem até a antiga Sala de Alquimia depois que o sol se põe. Os livros daqui não respondem bem a olhares apressados. O que procura entre frascos esquecidos e cinzas frias?',
         options: [
           {
-            text: 'Professor Wren, Seraphine Ashford desapareceu e quero saber o que ela descobriu.',
-            nextNode: 'octavian_confession',
-            effect: (state) => {
-              state.player.relationships.octavian += 3;
-            }
-          },
-          {
-            text: 'Como funciona exatamente a Poção da Lembrança e quais são seus riscos?',
-            nextNode: 'explain_potion',
+            text: 'Encontrei referências a Seraphine Ashford e a experimentos ligados à memória.',
+            nextNode: 'mention_seraphine',
             effect: (state) => {
               state.player.relationships.octavian += 1;
             }
           },
           {
-            text: 'Estou disposto a pagar qualquer preço para romper o esquecimento imposto pela Diretoria.',
-            nextNode: 'bold_determination',
+            text: 'Estou apenas explorando as alas antigas da academia.',
+            nextNode: 'cautious_entry'
+          },
+          {
+            text: 'Sinto que esta sala guarda algo que a Diretoria tentou ocultar.',
+            nextNode: 'suspicious_entry',
+            effect: (state) => {
+              state.player.relationships.octavian -= 1;
+            }
+          }
+        ]
+      },
+      mention_seraphine: {
+        text: 'Então os ecos do Salão das Cinzas ainda sussurram esse nome... Tenha cuidado. Aqui, até a poeira sobre as mesas lembra mais do que deveria. Examine os livros e os pergaminhos se precisa de provas, mas não toque nos alambiques sem compreender o que lê.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.showNotification('Missão 1 ativa: Examine os livros antigos, a fórmula incompleta e a anotação na Sala de Alquimia.', 'quest');
+        }
+      },
+      cautious_entry: {
+        text: 'Uma resposta prudente. Mas ninguém desce estas escadas por mero passeio arquitetônico. Observe os livros antigos sobre a mesa e os pergaminhos ao lado das velas. Quando estiver pronto para perguntar o que realmente quer saber, estarei aqui.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.showNotification('Missão 1 ativa: Investigue os livros antigos e os pergaminhos da Sala de Alquimia.', 'quest');
+        }
+      },
+      suspicious_entry: {
+        text: 'Em Noctária, tudo o que é trancado tem um motivo para permanecer no escuro. Se insistir em vasculhar esta sala, comece pelos livros antigos e pelas anotações abandonadas. Talvez descubra por que o silêncio aqui é tão pesado.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.showNotification('Missão 1 ativa: Investigue a Sala de Alquimia em busca de registros de Seraphine.', 'quest');
+        }
+      }
+    }
+  },
+
+  octavian_alchemy: {
+    characterId: 'octavian',
+    nodes: {
+      start: {
+        text: 'Existem lembranças que deveriam permanecer esquecidas. Algumas portas não foram fechadas por acidente.',
+        options: [
+          {
+            text: 'O que você sabe sobre Seraphine?',
+            nextNode: 'ask_seraphine',
             effect: (state) => {
               state.player.relationships.octavian += 2;
+              state.player.choices.octavianStance = 'seraphine_inquiry';
             }
           },
           {
-            text: 'Apenas examinando o caldeirão e os reagentes para cumprir minhas tarefas.',
-            nextNode: 'practical_approach'
+            text: 'Por que está tentando esconder esses experimentos?',
+            nextNode: 'confront_hiding',
+            effect: (state) => {
+              state.player.relationships.octavian -= 1;
+              state.player.choices.octavianStance = 'confronted_hiding';
+            }
+          },
+          {
+            text: 'Quero saber o que aconteceu naquela sala.',
+            nextNode: 'ask_room_events',
+            effect: (state) => {
+              state.player.relationships.octavian += 1;
+              state.player.choices.octavianStance = 'room_events';
+            }
           }
         ]
       },
-      bold_determination: {
-        text: 'Coragem não lhe falta... Mas em alquimia, o excesso de audácia costuma queimar as retinas ou dissolver o bom senso. A Poção da Lembrança exige precisão cirúrgica.',
+      ask_seraphine: {
+        text: 'Seraphine Ashford era brilhante — e teimosa o bastante para não aceitar as lacunas nos arquivos de Noctária. Ela veio até esta mesma bancada procurando uma forma de preservar memórias antes que a 13ª badalada apagasse os rastros dela.',
         options: [
           {
-            text: 'Quais reagentes devemos misturar?',
-            nextNode: 'potion_instructions'
+            text: 'Ela conseguiu terminar a fórmula da Poção da Lembrança?',
+            nextNode: 'missing_ingredients_reveal'
+          },
+          {
+            text: 'Você a ajudou a criar esse elixir?',
+            nextNode: 'octavian_role'
           }
         ]
       },
-      practical_approach: {
-        text: 'Uma mente metódica é o que preserva um alquimista inteiro. Observe as retortas e converse com Celeste; ela preparou os catalisadores.',
+      confront_hiding: {
+        text: 'Esconder? Não confunda contenção com cumplicidade, iniciado. Se a Diretora Morgana soubesse que a fórmula de Seraphine ainda repousa sobre esta madeira, estas paredes já teriam sido reduzidas a cinzas. Eu preservo o que resta — mantendo você longe do mesmo destino.',
         options: [
           {
-            text: 'Ouvir as instruções da preparação.',
-            nextNode: 'potion_instructions'
+            text: 'Então me ajude a completar a fórmula que encontrei.',
+            nextNode: 'missing_ingredients_reveal'
+          },
+          {
+            text: 'Não vou recuar agora. O que está faltando no pergaminho?',
+            nextNode: 'missing_ingredients_reveal'
           }
         ]
       },
-      octavian_confession: {
-        text: 'Seraphine era minha orientanda mais talentosa... Quando ela descobriu que a academia drenava ecos dos alunos, tentou me avisar. Mas a Diretoria agiu antes. A poção que pesquiso pode reativar a memória gravada na própria atmosfera de Noctária.',
+      ask_room_events: {
+        text: 'Três anos atrás, as velas desta sala queimaram em chama azul durante uma noite inteira. Seraphine destilou um primeiro rascunho para enxergar além do véu do esquecimento. Quando ouviu passos descendo a escadaria, ela rasgou a página final e escondeu os reagentes nos armários.',
         options: [
           {
-            text: 'Quais ingredientes são necessários?',
-            nextNode: 'explain_potion'
+            text: 'Quais ingredientes ela escondeu nos armários?',
+            nextNode: 'missing_ingredients_reveal'
+          },
+          {
+            text: 'E o que aconteceu logo depois daquela noite?',
+            nextNode: 'aftermath_hint'
           }
         ]
       },
-      explain_potion: {
-        text: 'Precisamos de quatro essências fundamentais: Orvalho Lunar colhido nos jardins, Raiz de Mandrágora de Cinzas, Cinza de Fênix Noturna e Éter Rúnico. A ordem no caldeirão deve respeitar o fluxo alquímico estrito.',
+      octavian_role: {
+        text: 'Eu lhe emprestei os instrumentos e o silêncio. Em Noctária, isso já equivale a uma traição. Mas ela partiu antes que pudéssemos concluir a última destilação.',
         options: [
           {
-            text: 'Celeste Veyra pode nos ajudar na preparação?',
-            nextNode: 'celeste_intro'
+            text: 'Quais ingredientes faltam para concluirmos o que ela começou?',
+            nextNode: 'missing_ingredients_reveal'
           }
         ]
       },
-      celeste_intro: {
-        text: 'Celeste conhece a temperatura exata do fogo violeta. Fale com ela junto à bancada leste para reunir os frascos e dar início à destilação.',
+      aftermath_hint: {
+        text: 'Na manhã seguinte, o nome dela desapareceu dos livros de matrícula. Apenas a fórmula incompleta e os frascos trancados permaneceram aqui.',
+        options: [
+          {
+            text: 'Diga-me quais ingredientes estão faltando na fórmula.',
+            nextNode: 'missing_ingredients_reveal'
+          }
+        ]
+      },
+      missing_ingredients_reveal: {
+        text: 'Para reconstruir a Poção da Lembrança, faltam quatro essências exatas: Orvalho Lunar Destilado, Raiz de Mandrágora de Cinzas, Cinza de Fênix Noturna e Éter Rúnico Puro. Verifique os armários antigos de madeira escura e as estantes junto à janela — ela os dividiu para que ninguém os encontrasse juntos.',
+        options: [
+          {
+            text: 'Em que ordem devo adicioná-los ao experimento?',
+            nextNode: 'order_guidance'
+          },
+          {
+            text: 'Vou investigar os armários imediatamente.',
+            nextNode: 'end_octavian_mission2'
+          }
+        ]
+      },
+      order_guidance: {
+        text: 'Respeite o fluxo do manuscrito: primeiro o Orvalho Lunar como base líquida, depois a Raiz de Mandrágora para ancorar o tempo, em seguida a Cinza de Fênix para despertar o calor da memória, e por fim o Éter Rúnico para estabilizar a visão.',
         isEnd: true,
         onComplete: (game) => {
-          game.flags.octavianTalked = true;
-          game.updateQuestStep(0);
-          game.showNotification('Converse com Celeste Veyra para preparar a Poção da Lembrança.', 'quest');
+          game.onOctavianRevealedFormula();
+        }
+      },
+      end_octavian_mission2: {
+        text: 'Procure nos armários com atenção. E quando reunir os quatro frascos, aproxime-se da bancada com os instrumentos e o caldeirão.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.onOctavianRevealedFormula();
+        }
+      }
+    }
+  },
+
+  ch2_memory_investigation: {
+    characterId: 'seraphine',
+    nodes: {
+      start: {
+        text: 'O vapor azulado da Poção da Lembrança se condensa no ar. Em meio ao silêncio da Sala de Alquimia, um eco vívido se forma: você vê Seraphine Ashford apressada à luz da lareira de um aposento antigo, escondendo algo com o brasão de um corvo.',
+        options: [
+          {
+            text: 'Observar os detalhes do aposento mostrado na visão.',
+            nextNode: 'identify_location',
+            effect: (state) => {
+              state.player.flags.ch2MemoryInvestigated = true;
+              state.player.flags.ch2LocationIdentified = true;
+            }
+          },
+          {
+            text: 'Focar no objeto que Seraphine segura nas mãos.',
+            nextNode: 'identify_object',
+            effect: (state) => {
+              state.player.flags.ch2MemoryInvestigated = true;
+              state.player.flags.ch2EliasClueFound = true;
+            }
+          }
+        ]
+      },
+      identify_location: {
+        text: 'As janelas em arco ogival sob a chuva e a lareira de pedra escura não pertencem à Sala de Alquimia... É o Dormitório da Noite — os aposentos ligados à linhagem de Elias Crowe. Seraphine esteve lá momentos antes de desaparecer.',
+        options: [
+          {
+            text: 'Examinar o objeto que ela entrega na lembrança.',
+            nextNode: 'elias_connection'
+          }
+        ]
+      },
+      identify_object: {
+        text: 'Entre os dedos trêmulos de Seraphine brilha uma chave antiga de ferro escuro marcada com um corvo e uma fechadura — o mesmo símbolo da família de Elias Crowe. Ela murmura: "Guarde isto no dormitório, Elias. Só a Chave pode abrir o que eles selaram."',
+        options: [
+          {
+            text: 'Identificar o local exato onde ela escondeu a pista.',
+            nextNode: 'elias_connection'
+          }
+        ]
+      },
+      elias_connection: {
+        text: 'A imagem se desfaz em faíscas prateadas, deixando uma certeza irrefutável: o Dormitório da Noite guarda o último rastro deixado por Seraphine, e a chave pertence a Elias Crowe. É hora de registrar esta descoberta no diário e seguir para a próxima etapa.',
+        isEnd: true,
+        onComplete: (game) => {
+          game.completeChapter2FinalDiscovery();
         }
       }
     }

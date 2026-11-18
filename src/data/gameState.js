@@ -125,7 +125,21 @@ export const PHASES_CONFIG = {
   phase_2: {
     id: 'phase_2',
     number: 2,
-    title: 'Fase 2 — A Biblioteca Velada',
+    title: 'Capítulo 2 — Fragmentos de Memória',
+    scene: 'alchemy_lab',
+    locationName: 'Sala de Alquimia • Ala Subterrânea',
+    category: 'Cripta Alquímica',
+    coordinates: { x: 42, y: 44 },
+    atmosphere: 'Velas douradas e reflexos azulados banham armários antigos, frascos luminescentes e pergaminhos com fórmulas esquecidas.',
+    description: 'Os documentos do Salão das Cinzas revelaram que Seraphine frequentava a antiga Sala de Alquimia em busca de experimentos ligados à memória.',
+    cluesHere: ['Livros de Alquimia', 'Fórmula Incompleta', 'Anotação de Seraphine', 'Poção da Lembrança'],
+    lockReason: 'A Sala de Alquimia permanece selada até que a identidade de Seraphine seja confirmada.',
+    unlockRequirement: 'Conclua o Capítulo 1: confirme com Elias que Seraphine Ashford foi apagada dos registros.'
+  },
+  phase_3: {
+    id: 'phase_3',
+    number: 3,
+    title: 'Arquivo Restrito — A Biblioteca Velada',
     scene: 'library',
     locationName: 'A Biblioteca Velada • Arquivo Restrito',
     category: 'Arquivo Restrito',
@@ -133,36 +147,22 @@ export const PHASES_CONFIG = {
     atmosphere: 'Estantes infinitas que desafiam a gravidade e o sussurro constante de páginas vivas.',
     description: 'Guarnecida pela enigmática Madam Vespera, a biblioteca oculta manuscritos ancestrais e a fórmula do feitiço Revelare, essencial para enxergar o que o véu esconde.',
     cluesHere: ['Fragmentos A, B e C do Manuscrito', 'Inscrição de Revelare'],
-    lockReason: 'As portas dos arquivos estão trancadas por selos de esquecimento.',
-    unlockRequirement: 'Conclua a Fase 1: confirme com Elias que Seraphine Ashford foi apagada dos registros.'
-  },
-  phase_3: {
-    id: 'phase_3',
-    number: 3,
-    title: 'Fase 3 — A Poção da Lembrança',
-    scene: 'alchemy_lab',
-    locationName: 'Laboratório de Alquimia das Sombras',
-    category: 'Cripta Subterrânea',
-    coordinates: { x: 42, y: 44 },
-    atmosphere: 'Vapores luminescentes verdes e azuis borbulham em retortas de vidro alquímico.',
-    description: 'Sob a supervisão do Prof. Octavian e de Celeste Veyra, você deve recolher quatro ingredientes raros e destilar o elixir capaz de romper as barreiras do esquecimento mental.',
-    cluesHere: ['Fórmula do Elixir da Lembrança', 'Orvalho Lunar', 'Cinza de Fênix'],
-    lockReason: 'A cripta alquímica está selada por barreira mágica que oculta a maçaneta.',
-    unlockRequirement: 'Conclua a Fase 2: decifre o manuscrito na biblioteca e domine o feitiço REVELARE.'
+    lockReason: 'Os arquivos restritos se abrem para quem já iniciou a investigação alquímica.',
+    unlockRequirement: 'Avance pelo Capítulo 2: explore a Sala de Alquimia e acesse os arquivos pelo Mapa Arcano.'
   },
   phase_4: {
     id: 'phase_4',
     number: 4,
-    title: 'Fase 4 — O Segredo de Elias',
+    title: 'Capítulo 3 — A Chave de Elias',
     scene: 'dormitory',
     locationName: 'Dormitório da Noite e Pátio Interno',
     category: 'Alas Residenciais',
     coordinates: { x: 25, y: 46 },
     atmosphere: 'Chamas crepitam na lareira de pedra enquanto a chuva fustiga as janelas em arco ogival.',
-    description: 'A linhagem de Elias Crowe esteve ligada à fundação de Noctária. Nos aposentos antigos repousa a chave da lareira e a Primeira Chave Dimensional.',
+    description: 'A linhagem de Elias Crowe esteve ligada à fundação de Noctária. A memória revelada pela poção aponta para um objeto oculto nos aposentos.',
     cluesHere: ['Diário de Elias Crowe', 'Chave da Lareira', 'Primeira Chave Dimensional'],
     lockReason: 'Os aposentos dos veteranos estão fechados para novatos sem pistas sólidas.',
-    unlockRequirement: 'Conclua a Fase 3: destile e consuma a Poção da Lembrança no caldeirão das sombras.'
+    unlockRequirement: 'Conclua o Capítulo 2: ative a Poção da Lembrança e investigue o último registro de Seraphine.'
   },
   phase_5: {
     id: 'phase_5',
@@ -271,6 +271,7 @@ export const INITIAL_STATE = {
     },
     choices: {
       eliasTrust: 'none', // 'trusted' | 'confronted'
+      octavianStance: 'none', // 'seraphine_inquiry' | 'confronted_hiding' | 'room_events'
       potionDrinker: 'none', // 'self' | 'elias'
       endingChosen: 'none' // 'sealed' | 'guardian' | 'forbidden'
     },
@@ -282,7 +283,7 @@ export const INITIAL_STATE = {
       phantomDoorVanished: false,
       prologueCompleted: false,
 
-      // Phase 1
+      // Phase 1 (Capítulo 1: O Nome que Não Existe)
       phase1TalkedElias: false,
       noticeBoardExamined: false,
       erasedPhotoExamined: false,
@@ -290,7 +291,23 @@ export const INITIAL_STATE = {
       seraphineNameDiscovered: false,
       phase1Completed: false,
 
-      // Phase 2
+      // Capítulo 2: Fragmentos de Memória (Sala de Alquimia)
+      chapter2IntroSeen: false,
+      ch2MissionStage: 1,
+      ch2BooksExamined: false,
+      ch2FormulaFound: false,
+      ch2SeraphineNoteFound: false,
+      ch2MissingIngredientsKnown: false,
+      ch2CabinetsInvestigated: false,
+      ch2IngredientsOrganized: false,
+      ch2InstructionsFollowed: false,
+      ch2PotionActivated: false,
+      ch2MemoryInvestigated: false,
+      ch2LocationIdentified: false,
+      ch2EliasClueFound: false,
+      ch2FinalDiscoveryLogged: false,
+
+      // Phase 2 (Biblioteca Velada)
       vesperaTalked: false,
       fragment1Found: false,
       fragment2Found: false,
