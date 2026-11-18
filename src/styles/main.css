@@ -1,14 +1,34 @@
 /* ==========================================================================
-   DIALOGUE BOX & GOTHIC VISUAL NOVEL INTERFACE
+   DIALOGUE BOX & GOTHIC VISUAL NOVEL INTERFACE (CINEMATOGRÁFICO / NETFLIX STYLE)
    ========================================================================== */
+.dialogue-cinematic-scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 60%, rgba(4, 6, 16, 0.45) 0%, rgba(2, 4, 10, 0.85) 100%);
+  backdrop-filter: blur(4px);
+  z-index: 34;
+  animation: scrimFadeIn 0.35s ease forwards;
+  pointer-events: auto;
+}
+
+@keyframes scrimFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dialogue-cinematic-scrim.scrim-fade-out {
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+
 .dialogue-overlay.vn-dialogue-frame {
   position: absolute;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   width: min(1040px, 94vw);
-  background: linear-gradient(180deg, rgba(8, 12, 29, 0.98) 0%, rgba(5, 7, 18, 0.99) 100%);
-  border: 1px solid rgba(194, 194, 212, 0.35);
+  background: linear-gradient(180deg, rgba(8, 12, 29, 0.96) 0%, rgba(4, 6, 16, 0.98) 100%);
+  border: 1px solid rgba(165, 138, 232, 0.3);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(111, 71, 179, 0.25);
   border-radius: 8px;
   z-index: 35;
@@ -677,7 +697,7 @@ body, html {
   pointer-events: auto;
 }
 
-/* Hotspots / Interactive Exploration System */
+/* Hotspots / Interactive Exploration System (Discreto, cinematográfico, sem ícones exagerados) */
 .hotspot {
   position: absolute;
   cursor: pointer;
@@ -685,104 +705,95 @@ body, html {
   align-items: center;
   justify-content: center;
   transform: translate(-50%, -50%);
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 12;
+  width: 24px;
+  height: 24px;
 }
 
 .hotspot:hover {
-  transform: translate(-50%, -50%) scale(1.12);
+  transform: translate(-50%, -50%) scale(1.25);
   z-index: 25;
 }
 
-.hotspot-aura {
-  position: absolute;
-  width: 54px;
-  height: 54px;
+/* Ponto de luz sutil e etéreo, como poeira arcana flutuante */
+.hotspot-core-spark {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(178, 154, 240, 0.45) 0%, rgba(74, 110, 199, 0.15) 60%, transparent 100%);
-  animation: hotspotAuraBreath 2.8s infinite ease-in-out;
-  pointer-events: none;
-}
-
-@keyframes hotspotAuraBreath {
-  0% { transform: scale(0.85); opacity: 0.5; }
-  50% { transform: scale(1.35); opacity: 0.95; }
-  100% { transform: scale(0.85); opacity: 0.5; }
-}
-
-.hotspot-pulse {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px dashed var(--color-luminous-purple);
-  animation: hotspotRingSpin 8s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes hotspotRingSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.hotspot-pin {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1b2649, #090e24);
-  border: 2px solid var(--pin-color, var(--color-luminous-purple));
-  box-shadow: 0 0 15px var(--pin-color, var(--color-luminous-purple)), inset 0 0 8px rgba(0,0,0,0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--spark-color, #a58ae8);
+  box-shadow: 0 0 12px var(--spark-color, #a58ae8), 0 0 24px var(--spark-color, #a58ae8);
+  opacity: 0.65;
+  transition: all 0.3s ease;
   position: relative;
-  z-index: 2;
-  transition: all 0.25s ease;
 }
 
-.hotspot-icon {
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
-/* Category specific pins */
-.hotspot.kind-dialogue .hotspot-pin {
-  border-color: #f7b267;
-  box-shadow: 0 0 18px rgba(247, 178, 103, 0.7);
-}
-
-.hotspot.kind-puzzle .hotspot-pin {
-  border-color: var(--color-emerald-arcane);
-  box-shadow: 0 0 18px rgba(78, 240, 196, 0.7);
-}
-
-.hotspot.kind-spell .hotspot-pin {
-  border-color: #b29af0;
-  box-shadow: 0 0 20px rgba(178, 154, 240, 0.8);
-}
-
-.hotspot.kind-travel .hotspot-pin {
-  border-color: #60a5fa;
-  box-shadow: 0 0 18px rgba(96, 165, 250, 0.7);
-}
-
-/* Investigated state */
-.hotspot.is-investigated .hotspot-pin {
-  opacity: 0.8;
-  border-width: 1.5px;
-}
-
-.hotspot.is-investigated .hotspot-aura {
+.hotspot-core-spark::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--spark-color, #a58ae8);
   opacity: 0.35;
+  animation: sparkPulse 2.8s infinite ease-in-out;
 }
 
-/* Badges on Hover */
+@keyframes sparkPulse {
+  0% { transform: scale(0.8); opacity: 0.2; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+  100% { transform: scale(0.8); opacity: 0.2; }
+}
+
+.hotspot:hover .hotspot-core-spark {
+  opacity: 1;
+  transform: scale(1.3);
+  box-shadow: 0 0 16px var(--spark-color, #a58ae8), 0 0 32px var(--spark-color, #a58ae8);
+}
+
+.hotspot:hover .hotspot-core-spark::after {
+  border-color: #fff;
+  opacity: 0.8;
+}
+
+/* Category specific spark accents */
+.hotspot.kind-dialogue .hotspot-core-spark {
+  background: #f7b267;
+  box-shadow: 0 0 14px rgba(247, 178, 103, 0.7);
+}
+
+.hotspot.kind-puzzle .hotspot-core-spark {
+  background: var(--color-emerald-arcane);
+  box-shadow: 0 0 14px rgba(78, 240, 196, 0.7);
+}
+
+.hotspot.kind-spell .hotspot-core-spark {
+  background: #b29af0;
+  box-shadow: 0 0 16px rgba(178, 154, 240, 0.8);
+}
+
+.hotspot.kind-travel .hotspot-core-spark {
+  background: #60a5fa;
+  box-shadow: 0 0 14px rgba(96, 165, 250, 0.7);
+}
+
+/* Investigated state: even more discrete */
+.hotspot.is-investigated .hotspot-core-spark {
+  opacity: 0.4;
+  transform: scale(0.85);
+}
+
+.hotspot.is-investigated:hover .hotspot-core-spark {
+  opacity: 0.85;
+  transform: scale(1.1);
+}
+
+/* Badges on Hover — elegantes, translúcidas estilo Netflix / Dark Luxury */
 .hotspot-badge-tag {
   position: absolute;
   top: 100%;
-  margin-top: 10px;
-  background: rgba(6, 9, 23, 0.95);
-  border: 1px solid var(--color-aged-silver);
+  margin-top: 8px;
+  background: rgba(8, 12, 28, 0.92);
+  border: 1px solid rgba(194, 194, 212, 0.25);
   border-radius: 4px;
   padding: 6px 12px;
   display: flex;
@@ -792,48 +803,50 @@ body, html {
   pointer-events: none;
   opacity: 0;
   transform: translateY(6px);
-  transition: all 0.25s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
   z-index: 30;
 }
 
 .hotspot:hover .hotspot-badge-tag {
   opacity: 1;
   transform: translateY(0);
-  border-color: var(--color-luminous-purple);
-  box-shadow: 0 0 16px rgba(178, 154, 240, 0.4);
+  border-color: rgba(165, 138, 232, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.9), 0 0 14px rgba(165, 138, 232, 0.2);
 }
 
 .badge-cat {
   font-family: var(--font-ui);
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-luminous-purple);
 }
 
 .badge-name {
   font-family: var(--font-title);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: #fff;
   font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .badge-status {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--color-text-dim);
 }
 
 /* Click feedback ripple */
 .hotspot-click-fx {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  border: 2px solid var(--color-emerald-arcane);
+  border: 1.5px solid var(--color-emerald-arcane);
   pointer-events: none;
-  animation: clickRipple 0.6s ease-out forwards;
+  animation: clickRipple 0.5s ease-out forwards;
 }
 
 @keyframes clickRipple {

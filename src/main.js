@@ -970,24 +970,19 @@ class NoctariaGame {
     const isEntrance = label.includes('Entrada') || label.includes('Passagem') || label.includes('Portal') || label.includes('Acesso') || label.includes('Fissura');
     
     let kindClass = 'kind-investigate';
-    let iconChar = '🔍';
     let badgeText = 'Examinar';
 
     if (isCharacter) {
       kindClass = 'kind-dialogue';
-      iconChar = '💬';
       badgeText = 'Conversar';
     } else if (isPuzzle) {
       kindClass = 'kind-puzzle';
-      iconChar = '⚙';
       badgeText = 'Enigma';
     } else if (isSpellObject) {
       kindClass = 'kind-spell';
-      iconChar = '✦';
       badgeText = 'Arcano';
     } else if (isEntrance) {
       kindClass = 'kind-travel';
-      iconChar = '🗝';
       badgeText = 'Avançar';
     }
 
@@ -1002,15 +997,11 @@ class NoctariaGame {
     spot.setAttribute('aria-label', label);
 
     spot.innerHTML = `
-      <div class="hotspot-aura"></div>
-      <div class="hotspot-pulse"></div>
-      <div class="hotspot-pin" style="--pin-color:${color};">
-        <span class="hotspot-icon">${iconChar}</span>
-      </div>
+      <div class="hotspot-core-spark" style="--spark-color:${color};"></div>
       <div class="hotspot-badge-tag">
         <span class="badge-cat">${badgeText}</span>
         <span class="badge-name">${label}</span>
-        <span class="badge-status">${isInvestigated ? '✓ Investigado' : '● Novo'}</span>
+        <span class="badge-status">${isInvestigated ? '✓ Conhecido' : '● Interagir'}</span>
       </div>
     `;
 
@@ -1020,7 +1011,7 @@ class NoctariaGame {
       spot.classList.remove('is-unexplored');
       spot.classList.add('is-investigated');
       const statusEl = spot.querySelector('.badge-status');
-      if (statusEl) statusEl.innerText = '✓ Investigado';
+      if (statusEl) statusEl.innerText = '✓ Conhecido';
 
       // Visual click ripple
       const ripple = document.createElement('div');
@@ -2309,6 +2300,12 @@ class NoctariaGame {
       existingOverlay = document.createElement('div');
       existingOverlay.id = 'dialogue-overlay';
       existingOverlay.className = 'dialogue-overlay vn-dialogue-frame';
+      
+      // Scrim background for cinematic focus
+      const scrim = document.createElement('div');
+      scrim.className = 'dialogue-cinematic-scrim';
+      scrim.id = 'dialogue-scrim';
+      this.root.appendChild(scrim);
       this.root.appendChild(existingOverlay);
     }
 
@@ -2335,7 +2332,7 @@ class NoctariaGame {
             <h3 class="speaker-name">${character.name}</h3>
             <span class="speaker-ornament">✧</span>
           </div>
-          <div class="dialogue-skip-hint">Clique no texto para pular digitação</div>
+          <div class="dialogue-skip-hint">Clique para avançar texto</div>
         </div>
 
         <div class="dialogue-body-area">
@@ -2357,6 +2354,7 @@ class NoctariaGame {
     const optionsContainer = document.getElementById('dialogue-options-list');
     const optionsHeader = document.getElementById('dialogue-options-header');
     const cursorEl = document.getElementById('dialogue-cursor');
+    const scrimEl = document.getElementById('dialogue-scrim');
 
     if (this.textRevealInterval) clearInterval(this.textRevealInterval);
     const fullText = node.text;
@@ -2379,7 +2377,11 @@ class NoctariaGame {
         closeBtn.onclick = () => {
           if (node.onComplete) node.onComplete(this);
           existingOverlay.classList.add('dialogue-slide-down');
-          setTimeout(() => existingOverlay.remove(), 250);
+          if (scrimEl) scrimEl.classList.add('scrim-fade-out');
+          setTimeout(() => {
+            existingOverlay.remove();
+            if (scrimEl) scrimEl.remove();
+          }, 250);
         };
         optionsContainer.appendChild(closeBtn);
       } else {

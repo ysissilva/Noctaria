@@ -14,25 +14,101 @@ export const DIALOGUES = {
         text: 'Você... é o novo convocado? Estranho. Eu sinto como se já tivesse visto o formato dos seus passos antes, embora saiba com certeza que nunca nos cruzamos. Os portões de Noctária não costumam se abrir para qualquer um.',
         options: [
           {
+            text: 'Acredito que existem respostas que precisam ser encontradas aqui.',
+            nextNode: 'answers_sought',
+            effect: (state) => {
+              state.player.relationships.elias += 2;
+              state.player.choices.prologueStance = 'determined';
+            }
+          },
+          {
+            text: 'Talvez eu esteja no lugar errado. Este lugar exala perigo e segredos sombrios.',
+            nextNode: 'doubtful_arrival',
+            effect: (state) => {
+              state.player.choices.prologueStance = 'cautious';
+            }
+          },
+          {
+            text: 'Por que você está tão interessado na minha presença logo na entrada?',
+            nextNode: 'probing_elias',
+            effect: (state) => {
+              state.player.relationships.elias += 1;
+              state.player.choices.prologueStance = 'inquisitive';
+            }
+          },
+          {
             text: 'Recebi uma carta com o selo de uma porta e treze estrelas.',
             nextNode: 'knows_letter',
             effect: (state) => {
-              state.player.relationships.elias += 1;
+              state.player.relationships.elias += 2;
+              state.player.choices.prologueStance = 'bearer';
             }
+          }
+        ]
+      },
+      answers_sought: {
+        text: 'Respostas... Em Noctária, cada resposta que você desenterra costuma cobrar um preço em memórias. Mas aprecio sua determinação. Poucos chegam com tanta firmeza nos olhos.',
+        options: [
+          {
+            text: 'O que devo saber sobre os perigos deste castelo?',
+            nextNode: 'warn_castle'
           },
           {
-            text: 'Como assim você sente que já me viu? Que lugar é esse?',
-            nextNode: 'suspicious_welcome',
-            effect: (state) => {
-              // Neutral
-            }
+            text: 'Por onde devo iniciar minha busca?',
+            nextNode: 'guide_hall'
+          }
+        ]
+      },
+      doubtful_arrival: {
+        text: 'O medo é um instinto saudável sob estas abóbadas de pedra. Aqueles que não sentem o frio nos ossos são os primeiros a desaparecer sem deixar rastro. Mas se os portões se abriram para você, não foi por engano.',
+        options: [
+          {
+            text: 'Se não foi engano, o que me trouxe até aqui?',
+            nextNode: 'destiny_hint'
           },
           {
-            text: 'Prefiro guardar minhas respostas para mim.',
-            nextNode: 'guarded_welcome',
-            effect: (state) => {
-              state.player.relationships.elias -= 1;
-            }
+            text: 'Prefiro seguir em frente com cautela.',
+            nextNode: 'guide_hall'
+          }
+        ]
+      },
+      probing_elias: {
+        text: 'Porque sou o sentinela destes degraus há mais tempo do que gostaria de admitir. E porque a última pessoa que vi pisar nestas pedras com essa mesma expressão... desapareceu há três anos sem deixar registro oficial.',
+        options: [
+          {
+            text: 'Quem era essa pessoa que desapareceu?',
+            nextNode: 'seraphine_hint_early'
+          },
+          {
+            text: 'Vou descobrir o que aconteceu.',
+            nextNode: 'guide_hall'
+          }
+        ]
+      },
+      seraphine_hint_early: {
+        text: 'Não posso pronunciar o nome dela sob a vigília das gárgulas. Mas se você examinar a escadaria do saguão, verá que as cinzas ainda não esfriaram.',
+        options: [
+          {
+            text: 'Entendido. Vou investigar a escadaria agora mesmo.',
+            nextNode: 'guide_hall'
+          }
+        ]
+      },
+      destiny_hint: {
+        text: 'Algo antigo chamou por você. Fique atento aos sinos e ao chão de pedra da entrada.',
+        options: [
+          {
+            text: 'Seguir para a escadaria.',
+            nextNode: 'guide_hall'
+          }
+        ]
+      },
+      warn_castle: {
+        text: 'Nunca confie em portas que não possuem fechadura visível. E, acima de tudo, não mostre a ninguém qualquer documento com o selo de treze estrelas.',
+        options: [
+          {
+            text: 'Vou me lembrar desse conselho. Por onde começo?',
+            nextNode: 'guide_hall'
           }
         ]
       },
@@ -69,7 +145,7 @@ export const DIALOGUES = {
         onComplete: (game) => {
           game.flags.courtyardEliasMet = true;
           game.updateQuestStep(0);
-          game.showNotification('Objetivo atualizado: Examine a escadaria do saguão.', 'quest');
+          game.showNotification('Objetivo atualizado: Examine a carta misteriosa na escadaria.', 'quest');
         }
       }
     }
@@ -86,17 +162,46 @@ export const DIALOGUES = {
         options: [
           {
             text: 'Por que o rosto dessa estudante foi raspado com uma navalha?',
-            nextNode: 'erased_explanation'
+            nextNode: 'erased_explanation',
+            effect: (state) => {
+              state.player.relationships.elias += 1;
+            }
           },
           {
             text: 'O registro do livro de matrículas pula diretamente da página 41 para a 43.',
             nextNode: 'ledger_clue',
-            condition: (state) => state.player.flags.alteredLedgerExamined
+            condition: (state) => state.player.flags.alteredLedgerExamined,
+            effect: (state) => {
+              state.player.relationships.elias += 2;
+            }
           },
           {
-            text: 'Você sabe quem era Seraphine Ashford?',
+            text: 'Descobri a verdade: o nome dela era Seraphine Ashford!',
             nextNode: 'seraphine_whisper',
-            condition: (state) => state.player.flags.seraphineNameDiscovered
+            condition: (state) => state.player.flags.seraphineNameDiscovered,
+            effect: (state) => {
+              state.player.relationships.elias += 3;
+            }
+          },
+          {
+            text: 'A Diretora Morgana me alertou para não investigar o passado da academia.',
+            nextNode: 'morgana_warning_response',
+            effect: (state) => {
+              state.player.relationships.elias -= 1;
+            }
+          }
+        ]
+      },
+      morgana_warning_response: {
+        text: 'Morgana faz isso com todos os novatos. Ela planta o medo para que ninguém olhe para trás. Se você obedecer cegamente, será apenas mais uma sombra nas aulas de transmutação.',
+        options: [
+          {
+            text: 'Você tem razão. Quero descobrir a verdade sobre a aluna raspada.',
+            nextNode: 'erased_explanation'
+          },
+          {
+            text: 'Como posso investigar sem levantar suspeitas?',
+            nextNode: 'mural_hint'
           }
         ]
       },
@@ -106,6 +211,10 @@ export const DIALOGUES = {
           {
             text: 'E os alunos simplesmente esquecem?',
             nextNode: 'memory_drain'
+          },
+          {
+            text: 'Onde posso encontrar pistas concretas desse apagamento?',
+            nextNode: 'mural_hint'
           }
         ]
       },
@@ -114,6 +223,19 @@ export const DIALOGUES = {
         options: [
           {
             text: 'Como descubro o nome completo dela?',
+            nextNode: 'mural_hint'
+          },
+          {
+            text: 'O que havia na 13ª badalada que a Diretoria tanto teme?',
+            nextNode: 'chime_danger'
+          }
+        ]
+      },
+      chime_danger: {
+        text: 'O sino de treze badaladas abre a fenda dimensional para as Mil Portas. Seraphine descobriu que os fundadores não usavam magia comum... eles canalizavam o tempo.',
+        options: [
+          {
+            text: 'Vou inspecionar o vitral e o mural imediatamente.',
             nextNode: 'mural_hint'
           }
         ]
@@ -140,6 +262,19 @@ export const DIALOGUES = {
         options: [
           {
             text: 'Onde encontro os registros restantes da pesquisa dela?',
+            nextNode: 'library_unlocked'
+          },
+          {
+            text: 'Ela não atravessou sozinha? Havia mais alguém com ela?',
+            nextNode: 'companion_mystery'
+          }
+        ]
+      },
+      companion_mystery: {
+        text: 'Alguém da linhagem dos guardiões tentou ajudá-la. A verdade está selada na Biblioteca Velada. Madam Vespera guarda os arquivos restritos.',
+        options: [
+          {
+            text: 'Como faço para entrar na Biblioteca Velada?',
             nextNode: 'library_unlocked'
           }
         ]
@@ -173,11 +308,43 @@ export const DIALOGUES = {
             }
           },
           {
-            text: 'Apenas admirando a arquitetura imponente das fundações.',
+            text: 'Apenas admirando a arquitetura imponente e a história dos fundadores.',
             nextNode: 'cold_approval',
             effect: (state) => {
               state.player.relationships.morgana += 1;
             }
+          },
+          {
+            text: 'Notei que há páginas arrancadas no livro oficial de matrículas.',
+            nextNode: 'ledger_confront',
+            effect: (state) => {
+              state.player.relationships.morgana -= 1;
+            }
+          },
+          {
+            text: 'Peço desculpas pela intromissão, Diretora. Estou apenas conhecendo as dependências.',
+            nextNode: 'obedient_reply',
+            effect: (state) => {
+              state.player.relationships.morgana += 2;
+            }
+          }
+        ]
+      },
+      ledger_confront: {
+        text: 'Documentos antigos sofrem com a umidade e a passagem dos séculos. O que você chama de "páginas arrancadas" são expurgos necessários de registros corrompidos por magia instável. Não se ocupe com o que não lhe diz respeito.',
+        options: [
+          {
+            text: 'Entendido, Diretora. Não tocarei mais no assunto.',
+            nextNode: 'end_morgana'
+          }
+        ]
+      },
+      obedient_reply: {
+        text: 'A obediência é um escudo silencioso. Mantenha os olhos nas suas tarefas e seu tempo aqui será proveitoso.',
+        options: [
+          {
+            text: 'Sim, Senhora.',
+            nextNode: 'end_morgana'
           }
         ]
       },
@@ -216,19 +383,42 @@ export const DIALOGUES = {
         text: 'Pise com leveza, novato. Os tomos nesta ala respiram, e alguns não apreciam serem perturbados enquanto digerem a poeira dos séculos. O silêncio aqui é uma barreira de proteção. O que procura nos arquivos proibidos de Noctária?',
         options: [
           {
-            text: 'Procuro informações sobre as Mil Portas e manuscritos de translocação.',
-            nextNode: 'doors_lore'
-          },
-          {
-            text: 'Apresentar a carta com o símbolo de treze estrelas.',
+            text: 'Apresentar a carta com o selo das treze estrelas.',
             nextNode: 'respect_emblem',
             effect: (state) => {
-              state.player.relationships.vespera += 2;
+              state.player.relationships.vespera += 3;
             }
           },
           {
             text: 'Dizem que uma aluna chamada Seraphine pesquisava aqui antes de sumir.',
-            nextNode: 'seraphine_inquiry'
+            nextNode: 'seraphine_inquiry',
+            effect: (state) => {
+              state.player.relationships.vespera += 1;
+            }
+          },
+          {
+            text: 'Procuro informações sobre as Mil Portas e manuscritos de translocação.',
+            nextNode: 'doors_lore'
+          },
+          {
+            text: 'Apenas buscando compreender os limites da magia ensinada nesta academia.',
+            nextNode: 'magic_philosophy',
+            effect: (state) => {
+              state.player.relationships.vespera += 2;
+            }
+          }
+        ]
+      },
+      magic_philosophy: {
+        text: 'Os limites de Noctária são traçados não pelo poder, mas pelo que você está disposto a esquecer em troca de conhecimento. Cada fólio nestas prateleiras guarda a mente de quem ousou olhar para o abismo sem feitiços de proteção.',
+        options: [
+          {
+            text: 'Quais feitiços de proteção são necessários?',
+            nextNode: 'explain_three_spells'
+          },
+          {
+            text: 'Mostrar a carta com o selo das treze estrelas.',
+            nextNode: 'respect_emblem'
           }
         ]
       },
@@ -306,12 +496,44 @@ export const DIALOGUES = {
             text: 'Professor Wren, Seraphine Ashford desapareceu e quero saber o que ela descobriu.',
             nextNode: 'octavian_confession',
             effect: (state) => {
+              state.player.relationships.octavian += 3;
+            }
+          },
+          {
+            text: 'Como funciona exatamente a Poção da Lembrança e quais são seus riscos?',
+            nextNode: 'explain_potion',
+            effect: (state) => {
+              state.player.relationships.octavian += 1;
+            }
+          },
+          {
+            text: 'Estou disposto a pagar qualquer preço para romper o esquecimento imposto pela Diretoria.',
+            nextNode: 'bold_determination',
+            effect: (state) => {
               state.player.relationships.octavian += 2;
             }
           },
           {
-            text: 'Como funciona a Poção da Lembrança?',
-            nextNode: 'explain_potion'
+            text: 'Apenas examinando o caldeirão e os reagentes para cumprir minhas tarefas.',
+            nextNode: 'practical_approach'
+          }
+        ]
+      },
+      bold_determination: {
+        text: 'Coragem não lhe falta... Mas em alquimia, o excesso de audácia costuma queimar as retinas ou dissolver o bom senso. A Poção da Lembrança exige precisão cirúrgica.',
+        options: [
+          {
+            text: 'Quais reagentes devemos misturar?',
+            nextNode: 'potion_instructions'
+          }
+        ]
+      },
+      practical_approach: {
+        text: 'Uma mente metódica é o que preserva um alquimista inteiro. Observe as retortas e converse com Celeste; ela preparou os catalisadores.',
+        options: [
+          {
+            text: 'Ouvir as instruções da preparação.',
+            nextNode: 'potion_instructions'
           }
         ]
       },
@@ -408,6 +630,40 @@ export const DIALOGUES = {
               state.player.relationships.elias -= 2;
               state.player.choices.eliasTrust = 'confronted';
             }
+          },
+          {
+            text: 'Li o diário do seu avô. Nós dois queremos salvar Seraphine e impedir o colapso.',
+            nextNode: 'shared_goal_path',
+            effect: (state) => {
+              state.player.relationships.elias += 4;
+              state.player.choices.eliasTrust = 'allied';
+            }
+          },
+          {
+            text: 'Entregue a Chave Dimensional. O ritual não pode continuar sem ela.',
+            nextNode: 'demand_path',
+            effect: (state) => {
+              state.player.relationships.elias -= 1;
+              state.player.choices.eliasTrust = 'demanded';
+            }
+          }
+        ]
+      },
+      shared_goal_path: {
+        text: 'Você... realmente leu? Então você compreende o peso que carrego desde que Seraphine atravessou o limiar. Meu avô jurou proteger a chave para que ela só chegasse a quem pudesse quebrar a maldição, e não a quem quisesse explorá-la.',
+        options: [
+          {
+            text: 'Estamos juntos nessa. Mostre-me a chave e o feitiço.',
+            nextNode: 'give_key'
+          }
+        ]
+      },
+      demand_path: {
+        text: 'Você fala com a frieza dos enviados de Morgana. Mas os seus olhos... seus olhos não pertencem a ela. Se você quer a chave para enfrentar o que está por vir, que assim seja.',
+        options: [
+          {
+            text: 'Receber a chave e o feitiço.',
+            nextNode: 'give_key'
           }
         ]
       },
