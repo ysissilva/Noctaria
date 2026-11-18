@@ -23,6 +23,10 @@ export class Corridor3DScene {
     this.onInspectPortrait = options.onInspectPortrait || null;
     this.onInspectStairPainting = options.onInspectStairPainting || null;
     this.onEnterLibrary = options.onEnterLibrary || null;
+    this.onResumeGame = options.onResumeGame || null;
+    this.onRestartGame = options.onRestartGame || null;
+    this.onExitGame = options.onExitGame || null;
+    this.startInBasement = options.startInBasement || false;
 
     this.doors = [];
     this.activeNearDoor = null;
@@ -43,9 +47,9 @@ export class Corridor3DScene {
     this.actions = {};
     this.currentActionName = 'idle';
 
-    // Estado do jogador no corredor
+    // Estado do jogador no corredor (inicia no meio do corredor a z = 16, virado para frente z = -35)
     this.player = {
-      position: new THREE.Vector3(0, 0, 18),
+      position: new THREE.Vector3(0, 0, 16),
       velocity: new THREE.Vector3(),
       rotationY: Math.PI, // Olhando para o fundo do corredor
       speed: 6.8, // Velocidade aumentada ao andar (antes 4.8)
@@ -71,13 +75,13 @@ export class Corridor3DScene {
       rightHand: null
     };
 
-    // Controle de Câmera com Mouse (Terceira pessoa e Primeira pessoa)
+    // Controle de Câmera com Mouse (Terceira pessoa posicionada atrás do jogador a z = 19.6, olhando para frente)
     this.cameraAngles = {
-      yaw: Math.PI,           // Rotação horizontal ao redor do jogador
-      pitch: 0.15,           // Rotação vertical (altura do olhar)
+      yaw: 0,                 // Rotação horizontal: 0 coloca a câmera atrás do jogador olhando para -Z
+      pitch: 0.18,           // Rotação vertical (olhando levemente de cima)
       distance: 3.6,          // Distância inicial da câmera
-      targetYaw: Math.PI,
-      targetPitch: 0.15,
+      targetYaw: 0,
+      targetPitch: 0.18,
       targetDistance: 3.6,
       sensitivity: 0.0024,
       isPointerLocked: false,
@@ -148,6 +152,11 @@ export class Corridor3DScene {
     // 6. Carregar Modelo 3D Xbot com animações
     this.loadCharacterModel();
 
+    // Se o jogador estiver na Fase 1 (Sala da Diretoria no Porão), posicioná-lo diretamente lá
+    if (this.startInBasement) {
+      this.enterBasementRoom(true);
+    }
+
     // 7. Eventos de controles (Teclado e Redimensionamento)
     this.setupEventListeners();
 
@@ -161,12 +170,10 @@ export class Corridor3DScene {
     const ambientLight = new THREE.AmbientLight(0x4a6596, 4.2);
     this.scene.add(ambientLight);
 
-    // 2. Luz de névoa e luar etéreo azul-turquesa ao centro do teto/abóbada
-    const moonLight = new THREE.DirectionalLight(0x8ec5ff, 3.8);
+    // Luz de luar etéreo suave ao centro do teto/abóbada (sem criar manchas escuras no chão)
+    const moonLight = new THREE.DirectionalLight(0x8ec5ff, 2.5);
     moonLight.position.set(0, 18, 5);
-    moonLight.castShadow = true;
-    moonLight.shadow.mapSize.width = 1024;
-    moonLight.shadow.mapSize.height = 1024;
+    moonLight.castShadow = false;
     this.scene.add(moonLight);
 
     // Luz de preenchimento direcionada para o fundo do corredor
@@ -359,17 +366,18 @@ export class Corridor3DScene {
 
   // Gera textura procedural de blocos de cantaria cinza para as paredes da escadaria
   createStoneBlocksTexture() {
+    if (this._cachedStoneBlocksTex) return this._cachedStoneBlocksTex;
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
+    canvas.width = 512;
+    canvas.height = 512;
     const ctx = canvas.getContext('2d');
 
     // Fundo cinza escuro de argamassa e pedra
     ctx.fillStyle = '#222731';
-    ctx.fillRect(0, 0, 1024, 1024);
+    ctx.fillRect(0, 0, 512, 512);
 
-    const rows = 16;
-    const rowH = 1024 / rows;
+    const rows = 12;
+    const rowH = 512 / rows;
     const stoneColors = [
       '#48505e', '#535c6e', '#5d677a', '#3f4653', '#4d5666',
       '#596374', '#383e4a', '#545e70', '#495261', '#636e82'
@@ -377,8 +385,8 @@ export class Corridor3DScene {
 
     for (let r = 0; r < rows; r++) {
       const y = r * rowH;
-      const cols = 5;
-      const blockW = 1024 / cols;
+      const cols = 4;
+      const blockW = 512 / cols;
       const offsetX = (r % 2 === 0) ? 0 : blockW / 2;
 
       for (let c = -1; c <= cols + 1; c++) {
@@ -387,39 +395,10 @@ export class Corridor3DScene {
 
         // Bloco de cantaria principal
         ctx.fillStyle = color;
-        ctx.fillRect(x + 4, y + 4, blockW - 8, rowH - 8);
+        ctx.fillRect(x + 3, y + 3, blockW - 6, rowH - 6);
 
-        // Textura granular mineral de pedra
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
-        for (let i = 0; i < 28; i++) {
-          const rx = x + 5 + Math.random() * (blockW - 14);
-          const ry = y + 5 + Math.random() * (rowH - 14);
-          const rw = 2 + Math.random() * 8;
-          const rh = 1 + Math.random() * 4;
-          ctx.fillRect(rx, ry, rw, rh);
-        }
-
-        // Realce de luz nas bordas superiores e esquerdas do bloco chanfrado
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x + 4, y + rowH - 4);
-        ctx.lineTo(x + 4, y + 4);
-        ctx.lineTo(x + blockW - 4, y + 4);
-        ctx.stroke();
-
-        // Sombra de chanfro nas bordas inferiores e direitas
-        ctx.strokeStyle = 'rgba(10, 14, 20, 0.55)';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x + blockW - 4, y + 4);
-        ctx.lineTo(x + blockW - 4, y + rowH - 4);
-        ctx.lineTo(x + 4, y + rowH - 4);
-        ctx.stroke();
-
-        // Linha profunda da junta de argamassa
         ctx.strokeStyle = '#151922';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 2.5;
         ctx.strokeRect(x + 2, y + 2, blockW - 4, rowH - 4);
       }
     }
@@ -428,6 +407,7 @@ export class Corridor3DScene {
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(2, 4);
+    this._cachedStoneBlocksTex = texture;
     return texture;
   }
 
@@ -655,43 +635,36 @@ export class Corridor3DScene {
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0, -5);
-    floor.receiveShadow = true;
+    floor.receiveShadow = false;
     this.scene.add(floor);
 
-    // 3. Poças e reflexos luminosos no piso de pedra (como no centro da imagem)
-    const puddleGeo = new THREE.PlaneGeometry(3.6, 22);
-    const puddleMat = new THREE.MeshStandardMaterial({
-      color: 0x1f3b58,
-      roughness: 0.15,
-      metalness: 0.8,
-      transparent: true,
-      opacity: 0.5
-    });
-    const puddle = new THREE.Mesh(puddleGeo, puddleMat);
-    puddle.rotation.x = -Math.PI / 2;
-    puddle.position.set(0, 0.012, -7);
-    this.scene.add(puddle);
-
-    // 4. Paredes de Estantes de Livros Imponentes (ambos os lados repletos de tomos ancestrais)
-    const wallGeo = new THREE.PlaneGeometry(corridorLength, corridorHeight);
+    // 4. Paredes de Estantes de Livros Imponentes (com abertura limpa para a escadaria do porão em z: -5.2 a -2.8)
     const bookshelfMat = new THREE.MeshStandardMaterial({
       map: bookshelfTex,
       roughness: 0.75,
       metalness: 0.1
     });
 
-    // Parede Esquerda de Livros
-    const leftWall = new THREE.Mesh(wallGeo, bookshelfMat);
-    leftWall.position.set(-corridorWidth / 2, corridorHeight / 2, -5);
-    leftWall.rotation.y = Math.PI / 2;
-    leftWall.receiveShadow = true;
-    this.scene.add(leftWall);
+    // Parede Esquerda dividida em duas seções para não bloquear a porta do porão (z = -4)
+    // Seção Norte (z de 27.5 a -2.8): comprimento 30.3, centro z = 12.35
+    const leftWallNGeo = new THREE.PlaneGeometry(30.3, corridorHeight);
+    const leftWallN = new THREE.Mesh(leftWallNGeo, bookshelfMat);
+    leftWallN.position.set(-corridorWidth / 2, corridorHeight / 2, 12.35);
+    leftWallN.rotation.y = Math.PI / 2;
+    this.scene.add(leftWallN);
 
-    // Parede Direita de Livros
+    // Seção Sul (z de -5.2 a -37.5): comprimento 32.3, centro z = -21.35
+    const leftWallSGeo = new THREE.PlaneGeometry(32.3, corridorHeight);
+    const leftWallS = new THREE.Mesh(leftWallSGeo, bookshelfMat);
+    leftWallS.position.set(-corridorWidth / 2, corridorHeight / 2, -21.35);
+    leftWallS.rotation.y = Math.PI / 2;
+    this.scene.add(leftWallS);
+
+    // Parede Direita de Livros contínua
+    const wallGeo = new THREE.PlaneGeometry(corridorLength, corridorHeight);
     const rightWall = new THREE.Mesh(wallGeo, bookshelfMat);
     rightWall.position.set(corridorWidth / 2, corridorHeight / 2, -5);
     rightWall.rotation.y = -Math.PI / 2;
-    rightWall.receiveShadow = true;
     this.scene.add(rightWall);
 
     // 5. Teto Plano Alto com Vigas Góticas Decorativas (sem cilindro obstrutivo)
@@ -731,18 +704,6 @@ export class Corridor3DScene {
       this.scene.add(pRight);
     }
 
-    // 7. Névoa mística azulada etérea suave no chão do corredor
-    const mistGeo = new THREE.CylinderGeometry(2.0, 3.2, 1.2, 16, 1, true);
-    const mistMat = new THREE.MeshBasicMaterial({
-      color: 0x5cb8ff,
-      transparent: true,
-      opacity: 0.15,
-      side: THREE.DoubleSide
-    });
-    const mistColumn = new THREE.Mesh(mistGeo, mistMat);
-    mistColumn.position.set(0, 0.6, -14);
-    this.scene.add(mistColumn);
-
     // 7b. ESTANTES GRANDES DE MADEIRA COM LIVROS REAIS E LUSTRES CANDELABROS
     this.buildCorridorGrandBookshelves();
 
@@ -780,6 +741,146 @@ export class Corridor3DScene {
     const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(corridorWidth, corridorHeight), endWallMat);
     frontWall.position.set(0, corridorHeight / 2, -35.2);
     this.scene.add(frontWall);
+
+    // 11. Portão de ferro realista na cor prata, aberto para dentro, no início do corredor (z = 25.8)
+    this.buildSpawnSilverGate();
+  }
+
+  // Cria um portão de ferro trabalhado em prata, com duas folhas abertas para dentro do corredor
+  buildSpawnSilverGate() {
+    const silverMat = new THREE.MeshStandardMaterial({
+      color: 0xd8dde6,
+      metalness: 0.88,
+      roughness: 0.22
+    });
+    const darkSilverMat = new THREE.MeshStandardMaterial({
+      color: 0x8a92a0,
+      metalness: 0.9,
+      roughness: 0.3
+    });
+
+    const gateGroup = new THREE.Group();
+    gateGroup.position.set(0, 0, 25.8);
+
+    // Portal de pedra / moldura de ferro arqueada ao redor do portão
+    const archW = 4.4;
+    const archH = 5.6;
+    const framePostGeo = new THREE.BoxGeometry(0.35, archH, 0.4);
+    const postL = new THREE.Mesh(framePostGeo, darkSilverMat);
+    postL.position.set(-archW / 2 + 0.175, archH / 2, 0);
+    gateGroup.add(postL);
+
+    const postR = new THREE.Mesh(framePostGeo, darkSilverMat);
+    postR.position.set(archW / 2 - 0.175, archH / 2, 0);
+    gateGroup.add(postR);
+
+    const lintelGeo = new THREE.BoxGeometry(archW, 0.35, 0.45);
+    const lintel = new THREE.Mesh(lintelGeo, darkSilverMat);
+    lintel.position.set(0, archH - 0.175, 0);
+    gateGroup.add(lintel);
+
+    // Grade semicircular superior (tímpano do portão) com raios de prata
+    const tympanumBars = 7;
+    for (let b = 0; b < tympanumBars; b++) {
+      const angle = (b / (tympanumBars - 1)) * Math.PI;
+      const rayGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
+      const ray = new THREE.Mesh(rayGeo, silverMat);
+      ray.position.set(0, archH - 0.2, 0);
+      ray.rotation.z = angle - Math.PI / 2;
+      gateGroup.add(ray);
+    }
+
+    // Função para criar uma folha de portão de ferro com barras verticais e pontas de lança
+    const createGateLeaf = (width, height, isLeft) => {
+      const leaf = new THREE.Group();
+      // Pivô na dobradiça lateral
+      const pivotX = isLeft ? -archW / 2 + 0.35 : archW / 2 - 0.35;
+      leaf.position.set(pivotX, 0, 0);
+
+      // Aberto para dentro do corredor (em direção ao z negativo)
+      leaf.rotation.y = isLeft ? Math.PI * 0.42 : -Math.PI * 0.42;
+
+      const leafW = width;
+      const leafH = height;
+
+      // Moldura da folha
+      const barThick = 0.055;
+      const frameMat = darkSilverMat;
+
+      // Barra vertical da dobradiça
+      const vHinge = new THREE.Mesh(new THREE.BoxGeometry(barThick, leafH, barThick), frameMat);
+      vHinge.position.set(0, leafH / 2, 0);
+      leaf.add(vHinge);
+
+      // Barra vertical externa
+      const dir = isLeft ? 1 : -1;
+      const vOuter = new THREE.Mesh(new THREE.BoxGeometry(barThick, leafH, barThick), frameMat);
+      vOuter.position.set(dir * leafW, leafH / 2, 0);
+      leaf.add(vOuter);
+
+      // Barras horizontais (inferior, meia-altura e superior)
+      [0.2, leafH * 0.48, leafH - 0.2].forEach(hy => {
+        const hBar = new THREE.Mesh(new THREE.BoxGeometry(leafW, barThick, barThick), frameMat);
+        hBar.position.set(dir * leafW / 2, hy, 0);
+        leaf.add(hBar);
+      });
+
+      // Barras verticais finas com lanças góticas
+      const numBars = 7;
+      const spearMat = silverMat;
+      for (let i = 1; i < numBars; i++) {
+        const bx = dir * (i / numBars) * leafW;
+        const barGeo = new THREE.CylinderGeometry(0.022, 0.022, leafH - 0.3, 8);
+        const bar = new THREE.Mesh(barGeo, silverMat);
+        bar.position.set(bx, leafH / 2, 0);
+        leaf.add(bar);
+
+        // Ponta de lança prateada no topo
+        const spearGeo = new THREE.ConeGeometry(0.045, 0.26, 6);
+        const spear = new THREE.Mesh(spearGeo, spearMat);
+        spear.position.set(bx, leafH + 0.08, 0);
+        leaf.add(spear);
+      }
+
+      // Volutas decorativas em ferro prateado na parte central
+      const scrollGeo = new THREE.TorusGeometry(0.18, 0.02, 6, 16, Math.PI * 1.5);
+      const scroll = new THREE.Mesh(scrollGeo, silverMat);
+      scroll.position.set(dir * leafW * 0.5, leafH * 0.5, 0);
+      leaf.add(scroll);
+
+      return leaf;
+    };
+
+    const leafWidth = 1.7;
+    const leafHeight = 4.2;
+    gateGroup.add(createGateLeaf(leafWidth, leafHeight, true));
+    gateGroup.add(createGateLeaf(leafWidth, leafHeight, false));
+
+    // Iluminação dedicada no local de início (z = 22 a 26) para clarear o espaço que estava muito escuro
+    const startPointLight = new THREE.PointLight(0xffdfa8, 6.5, 20, 1.3);
+    startPointLight.position.set(0, 4.2, 24.5);
+    this.scene.add(startPointLight);
+
+    const gateLeftLantern = new THREE.PointLight(0xffca70, 4.0, 10, 1.2);
+    gateLeftLantern.position.set(-2.4, 3.2, 25.0);
+    this.scene.add(gateLeftLantern);
+
+    const gateRightLantern = new THREE.PointLight(0xffca70, 4.0, 10, 1.2);
+    gateRightLantern.position.set(2.4, 3.2, 25.0);
+    this.scene.add(gateRightLantern);
+
+    // Arandelas prateadas com fogo na entrada
+    [-2.2, 2.2].forEach(lx => {
+      const lampHolder = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.45, 0.2), darkSilverMat);
+      lampHolder.position.set(lx, 3.2, 25.7);
+      this.scene.add(lampHolder);
+
+      const lampFlame = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd266 }));
+      lampFlame.position.set(lx, 3.4, 25.6);
+      this.scene.add(lampFlame);
+    });
+
+    this.scene.add(gateGroup);
   }
 
   // Constrói as 3 portas de madeira maciça esculpida com maçanetas de latão, molduras e arcos
@@ -1039,37 +1140,28 @@ export class Corridor3DScene {
         plank.position.set(0, shelfY, 0);
         bc.add(plank);
 
-        // Preencher baía esquerda e baía direita com livros 3D
+        // Preencher baía esquerda e baía direita com blocos agrupados de livros (otimizado)
         [-1, 1].forEach(bay => {
           const bayW = (width - 0.36) / 2;
           const bayCenter = bay * (bayW / 2 + 0.05);
-          let currentX = bayCenter - bayW / 2 + 0.04;
-          const endX = bayCenter + bayW / 2 - 0.04;
+          const numClusters = 4;
+          const clusterW = (bayW - 0.08) / numClusters;
 
-          while (currentX < endX) {
-            const bWidth = 0.055 + Math.random() * 0.085;
-            const bHeight = 0.35 + Math.random() * (tierHeight - 0.44);
-            const bDepth = depth * 0.58 + Math.random() * (depth * 0.32);
+          for (let c = 0; c < numClusters; c++) {
+            const cx = bayCenter - bayW / 2 + 0.04 + c * clusterW + clusterW / 2;
+            const bHeight = tierHeight * 0.75 + Math.random() * (tierHeight * 0.15);
+            const bDepth = depth * 0.65;
             const mat = bookMats[Math.floor(Math.random() * bookMats.length)];
 
-            const bookGeo = new THREE.BoxGeometry(bWidth, bHeight, bDepth);
-            const bookMesh = new THREE.Mesh(bookGeo, mat);
+            const clusterGeo = new THREE.BoxGeometry(clusterW - 0.02, bHeight, bDepth);
+            const clusterMesh = new THREE.Mesh(clusterGeo, mat);
+            clusterMesh.position.set(cx, shelfY + 0.03 + bHeight / 2, 0);
+            bc.add(clusterMesh);
 
-            // Leve inclinação ocasional em livros no final da fileira
-            const tilt = (Math.random() > 0.8) ? (Math.random() - 0.5) * 0.2 : 0;
-            bookMesh.rotation.z = tilt;
-            bookMesh.position.set(currentX + bWidth / 2, shelfY + 0.03 + bHeight / 2, 0);
-            bc.add(bookMesh);
-
-            // Lombada dourada e detalhes clássicos
-            if (Math.random() > 0.45) {
-              const ribGeo = new THREE.BoxGeometry(bWidth * 0.85, 0.02, 0.02);
-              const rib = new THREE.Mesh(ribGeo, goldLeafMat);
-              rib.position.set(currentX + bWidth / 2, shelfY + 0.03 + bHeight * 0.72, bDepth / 2 + 0.005);
-              bc.add(rib);
-            }
-
-            currentX += bWidth + 0.015;
+            // Detalhe de lombada decorativa
+            const rib = new THREE.Mesh(new THREE.BoxGeometry(clusterW * 0.8, 0.03, 0.02), goldLeafMat);
+            rib.position.set(cx, shelfY + 0.03 + bHeight * 0.7, bDepth / 2 + 0.005);
+            bc.add(rib);
           }
         });
       }
@@ -2317,42 +2409,257 @@ export class Corridor3DScene {
       }
     });
 
-    // 12. PASSAGEM PARA A BIBLIOTECA VELADA NA PAREDE OESTE
-    const libDoorGroup = new THREE.Group();
-    libDoorGroup.position.set(-27.85, floorY, -4.0);
+    // 12. PORTAL COM BORDAS DOURADAS E PORTÃO COM CADEADO PARA A BIBLIOTECA VELADA
+    // Construção do portal na parede oeste (-27.85, floorY, -4.0)
+    const portalGroup = new THREE.Group();
+    portalGroup.position.set(-27.85, floorY, -4.0);
 
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x241810, roughness: 0.7, metalness: 0.2 });
-    const libDoorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4.2, 2.6), frameMat);
-    libDoorFrame.position.set(0, 2.1, 0);
-    libDoorGroup.add(libDoorFrame);
+    // Borda/moldura externa e arqueada dourada
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.85,
+      roughness: 0.25
+    });
+    const darkArchMat = new THREE.MeshStandardMaterial({
+      color: 0x1a1520,
+      roughness: 0.6,
+      metalness: 0.4
+    });
 
-    const libDoorMat = new THREE.MeshStandardMaterial({ map: woodDoorTex, roughness: 0.55, metalness: 0.15 });
-    const libDoorLeaf = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.8, 2.2), libDoorMat);
-    libDoorLeaf.position.set(0.1, 1.9, 0);
-    libDoorGroup.add(libDoorLeaf);
+    const portalFrameH = 4.4;
+    const portalFrameW = 2.8;
+    const portalDepth = 0.5;
 
-    const libRune = new THREE.Mesh(
-      new THREE.RingGeometry(0.4, 0.55, 16),
-      new THREE.MeshBasicMaterial({ color: 0x4ef0c4, side: THREE.DoubleSide })
+    // Batentes dourados do portal
+    const postGeo = new THREE.BoxGeometry(portalDepth, portalFrameH, 0.22);
+    const postNorth = new THREE.Mesh(postGeo, goldMat);
+    postNorth.position.set(0, portalFrameH / 2, 1.3);
+    portalGroup.add(postNorth);
+
+    const postSouth = new THREE.Mesh(postGeo, goldMat);
+    postSouth.position.set(0, portalFrameH / 2, -1.3);
+    portalGroup.add(postSouth);
+
+    // Verga superior em arco dourado
+    const lintelGeo = new THREE.BoxGeometry(portalDepth + 0.08, 0.32, portalFrameW + 0.16);
+    const lintelMesh = new THREE.Mesh(lintelGeo, goldMat);
+    lintelMesh.position.set(0, portalFrameH - 0.16, 0);
+    portalGroup.add(lintelMesh);
+
+    // Frontão decorativo dourado com insígnia mágica
+    const pedimentGeo = new THREE.BoxGeometry(portalDepth + 0.12, 0.45, portalFrameW + 0.3);
+    const pedimentMesh = new THREE.Mesh(pedimentGeo, goldMat);
+    pedimentMesh.position.set(0, portalFrameH + 0.22, 0);
+    portalGroup.add(pedimentMesh);
+
+    // Brasão dourado em relevo no topo
+    const crest = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, portalDepth + 0.15, 8), goldMat);
+    crest.rotation.z = Math.PI / 2;
+    crest.position.set(0, portalFrameH + 0.46, 0);
+    portalGroup.add(crest);
+
+    // Portão de ferro com barras verticais e travessas
+    const gateIronMat = new THREE.MeshStandardMaterial({
+      color: 0x22262d,
+      metalness: 0.88,
+      roughness: 0.3
+    });
+    const brassMat = new THREE.MeshStandardMaterial({
+      color: 0xc49b38,
+      metalness: 0.85,
+      roughness: 0.3
+    });
+
+    // Grupo do portão com grades
+    const ironGateGroup = new THREE.Group();
+    ironGateGroup.position.set(0, 0, 0);
+
+    // Moldura do portão
+    const gateH = portalFrameH - 0.4;
+    const gateW = portalFrameW - 0.24;
+    const gateBorderGeo = new THREE.BoxGeometry(0.08, gateH, 0.08);
+    const gatePostN = new THREE.Mesh(gateBorderGeo, gateIronMat);
+    gatePostN.position.set(0.05, gateH / 2, gateW / 2);
+    ironGateGroup.add(gatePostN);
+
+    const gatePostS = new THREE.Mesh(gateBorderGeo, gateIronMat);
+    gatePostS.position.set(0.05, gateH / 2, -gateW / 2);
+    ironGateGroup.add(gatePostS);
+
+    // Barras horizontais
+    [0.2, gateH * 0.5, gateH - 0.2].forEach(hy => {
+      const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, gateW), gateIronMat);
+      hBar.position.set(0.05, hy, 0);
+      ironGateGroup.add(hBar);
+    });
+
+    // Barras verticais de ferro (dando visibilidade para a sala através do portão)
+    const numBars = 9;
+    for (let b = 1; b < numBars; b++) {
+      const bz = -gateW / 2 + (b / numBars) * gateW;
+      const barMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, gateH - 0.25, 8), gateIronMat);
+      barMesh.position.set(0.05, gateH / 2, bz);
+      ironGateGroup.add(barMesh);
+    }
+
+    // CADEADO FECHADO GRANDE E VISÍVEL NO CENTRO DO PORTÃO
+    const padlockGroup = new THREE.Group();
+    padlockGroup.position.set(0.12, gateH * 0.5, 0);
+
+    // Corpo de latão envelhecido do cadeado
+    const lockBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.32, 0.24),
+      brassMat
     );
-    libRune.position.set(0.18, 2.0, 0);
-    libRune.rotation.y = Math.PI / 2;
-    libDoorGroup.add(libRune);
+    padlockGroup.add(lockBody);
 
-    const libLight = new THREE.PointLight(0x4ef0c4, 2.2, 5.0);
-    libLight.position.set(0.4, 2.0, 0);
-    libDoorGroup.add(libLight);
+    // Haste de aço curvada do cadeado (fechada)
+    const shackleGeo = new THREE.TorusGeometry(0.085, 0.022, 8, 16, Math.PI);
+    const shackle = new THREE.Mesh(shackleGeo, gateIronMat);
+    shackle.position.set(0, 0.16, 0);
+    shackle.rotation.y = Math.PI / 2;
+    padlockGroup.add(shackle);
 
-    this.scene.add(libDoorGroup);
+    // Corrente de ferro enrolada nas grades
+    const chainRing1 = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.018, 6, 12), gateIronMat);
+    chainRing1.position.set(0, 0.05, 0.08);
+    chainRing1.rotation.y = Math.PI / 2;
+    padlockGroup.add(chainRing1);
+
+    const chainRing2 = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.018, 6, 12), gateIronMat);
+    chainRing2.position.set(0, -0.05, -0.08);
+    chainRing2.rotation.y = Math.PI / 2;
+    padlockGroup.add(chainRing2);
+
+    ironGateGroup.add(padlockGroup);
+    portalGroup.add(ironGateGroup);
+
+    // Aura mágica e luz dourada suave do portal
+    const portalGlow = new THREE.PointLight(0xffdf80, 2.8, 6.0);
+    portalGlow.position.set(0.3, portalFrameH * 0.5, 0);
+    portalGroup.add(portalGlow);
+
+    this.scene.add(portalGroup);
+    this.libraryGateProps = {
+      portalGroup,
+      ironGateGroup,
+      padlockGroup,
+      portalGlow,
+      isUnlocked: false
+    };
+
+    // 13. CONSTRUÇÃO DA SALA VISÍVEL ATRAVÉS DO PORTÃO (SALA DA BIBLIOTECA VELADA)
+    // Localizada além do portão na direção oeste (x de -28 a -46)
+    const libRoomGroup = new THREE.Group();
+    libRoomGroup.position.set(-36.0, floorY, -4.0);
+
+    const libRoomW = 16.0; // eixo X
+    const libRoomD = 14.0; // eixo Z
+    const libRoomH = 5.2;
+
+    // Piso nobre da Biblioteca (madeira polida com tapete vermelho carmesim)
+    const libFloorGeo = new THREE.PlaneGeometry(libRoomW, libRoomD);
+    const libFloorMat = new THREE.MeshStandardMaterial({
+      color: 0x22150d,
+      roughness: 0.35,
+      metalness: 0.2
+    });
+    const libFloor = new THREE.Mesh(libFloorGeo, libFloorMat);
+    libFloor.rotation.x = -Math.PI / 2;
+    libFloor.position.set(0, 0.02, 0);
+    libRoomGroup.add(libFloor);
+
+    // Grande tapete persa carmesim no centro da sala visível
+    const libRugGeo = new THREE.PlaneGeometry(10.0, 7.0);
+    const libRugMat = new THREE.MeshStandardMaterial({
+      color: 0x6e1b24,
+      roughness: 0.85
+    });
+    const libRug = new THREE.Mesh(libRugGeo, libRugMat);
+    libRug.rotation.x = -Math.PI / 2;
+    libRug.position.set(0, 0.04, 0);
+    libRoomGroup.add(libRug);
+
+    // Teto arqueado da Biblioteca
+    const libCeilGeo = new THREE.PlaneGeometry(libRoomW, libRoomD);
+    const libCeilMat = new THREE.MeshStandardMaterial({
+      color: 0x14101e,
+      roughness: 0.8
+    });
+    const libCeil = new THREE.Mesh(libCeilGeo, libCeilMat);
+    libCeil.rotation.x = Math.PI / 2;
+    libCeil.position.set(0, libRoomH, 0);
+    libRoomGroup.add(libCeil);
+
+    // Parede Oeste da Biblioteca (ao fundo, vista de frente através do portão)
+    const libWallWestGeo = new THREE.PlaneGeometry(libRoomD, libRoomH);
+    const libWallWest = new THREE.Mesh(libWallWestGeo, bookshelfMat);
+    libWallWest.position.set(-libRoomW / 2, libRoomH / 2, 0);
+    libWallWest.rotation.y = Math.PI / 2;
+    libRoomGroup.add(libWallWest);
+
+    // Parede Norte da Biblioteca
+    const libWallNorthGeo = new THREE.PlaneGeometry(libRoomW, libRoomH);
+    const libWallNorth = new THREE.Mesh(libWallNorthGeo, bookshelfMat);
+    libWallNorth.position.set(0, libRoomH / 2, libRoomD / 2);
+    libWallNorth.rotation.y = Math.PI;
+    libRoomGroup.add(libWallNorth);
+
+    // Parede Sul da Biblioteca
+    const libWallSouthGeo = new THREE.PlaneGeometry(libRoomW, libRoomH);
+    const libWallSouth = new THREE.Mesh(libWallSouthGeo, bookshelfMat);
+    libWallSouth.position.set(0, libRoomH / 2, -libRoomD / 2);
+    libRoomGroup.add(libWallSouth);
+
+    // Estantes majestosas 3D na parede de fundo visíveis entre as grades do portão
+    const bkGeo = new THREE.BoxGeometry(0.6, 4.2, 5.0);
+    const bkMat = new THREE.MeshStandardMaterial({ color: 0x2b1509, roughness: 0.6 });
+    const bkCenter = new THREE.Mesh(bkGeo, bkMat);
+    bkCenter.position.set(-libRoomW / 2 + 0.35, 2.1, 0);
+    libRoomGroup.add(bkCenter);
+
+    // Livros coloridos e tomos iluminados na estante
+    for (let r = 0; r < 4; r++) {
+      const tierY = 0.6 + r * 0.9;
+      const bkTome = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.45, 4.2),
+        new THREE.MeshStandardMaterial({ color: 0x822525, roughness: 0.5 })
+      );
+      bkTome.position.set(-libRoomW / 2 + 0.45, tierY, 0);
+      libRoomGroup.add(bkTome);
+    }
+
+    // Globo e mesa de estudo alquímica ao centro da sala visível
+    const tableGeo = new THREE.BoxGeometry(2.4, 0.12, 1.4);
+    const tableTop = new THREE.Mesh(tableGeo, bkMat);
+    tableTop.position.set(-2.0, 1.1, 0);
+    libRoomGroup.add(tableTop);
+
+    const globeGeo = new THREE.SphereGeometry(0.28, 12, 12);
+    const globeMat = new THREE.MeshStandardMaterial({ color: 0x3d70b2, roughness: 0.3 });
+    const globe = new THREE.Mesh(globeGeo, globeMat);
+    globe.position.set(-2.0, 1.45, 0);
+    libRoomGroup.add(globe);
+
+    // Lustre suntuoso com iluminação dourada e misteriosa na sala interior
+    const libLightWarm = new THREE.PointLight(0xffbe55, 6.0, 18, 1.2);
+    libLightWarm.position.set(-3.0, 3.8, 0);
+    libRoomGroup.add(libLightWarm);
+
+    const libLightEthereal = new THREE.PointLight(0x6ee2ff, 3.5, 12, 1.4);
+    libLightEthereal.position.set(-libRoomW / 2 + 2.0, 2.6, 0);
+    libRoomGroup.add(libLightEthereal);
+
+    this.scene.add(libRoomGroup);
 
     this.interactivePoints.push({
       id: 'library_passage',
-      name: 'Passagem para a Biblioteca Velada',
+      name: 'Portal para a Biblioteca Velada',
       x: -27.0,
       y: floorY,
       z: -4.0,
-      radius: 3.0,
-      prompt: '✦ Pressione <kbd class="corridor-key">E</kbd> para avançar para a <strong>Biblioteca Velada (Fase 2)</strong> ✦',
+      radius: 3.2,
+      prompt: '✦ Pressione <kbd class="corridor-key">E</kbd> para inspecionar o <strong>Portal para a Biblioteca Velada</strong> ✦',
       onInteract: () => {
         if (this.onEnterLibrary) this.onEnterLibrary();
       }
@@ -2489,8 +2796,39 @@ export class Corridor3DScene {
     });
   }
 
+  createTemporaryCharacter() {
+    if (this.model) return;
+    const tempGroup = new THREE.Group();
+    tempGroup.position.copy(this.player.position);
+    tempGroup.rotation.y = this.player.rotationY;
+
+    const purpleMat = new THREE.MeshStandardMaterial({
+      color: 0x7b3fad,
+      roughness: 0.45,
+      metalness: 0.25
+    });
+
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.24, 1.35, 12), purpleMat);
+    body.position.y = 0.95;
+    tempGroup.add(body);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), purpleMat);
+    head.position.y = 1.78;
+    tempGroup.add(head);
+
+    this.model = tempGroup;
+    this.scene.add(this.model);
+
+    // Ocultar indicador imediatamente para a cena aparecer na hora
+    const loadIndicator = document.getElementById('corridor-3d-loading');
+    if (loadIndicator) loadIndicator.style.display = 'none';
+  }
+
   // Carrega o modelo Xbot oficial do exemplo Three.js (webgl_animation_skinning_additive_blending)
   loadCharacterModel() {
+    // Instanciar personagem provisório para visualização imediata do corredor
+    this.createTemporaryCharacter();
+
     const loader = new GLTFLoader();
     const modelUrl = '/assets/models/Xbot.glb';
 
@@ -2498,6 +2836,11 @@ export class Corridor3DScene {
       modelUrl,
       (gltf) => {
         if (this.isDisposed) return;
+
+        // Remover boneco provisório se existir
+        if (this.model) {
+          this.scene.remove(this.model);
+        }
 
         this.model = gltf.scene;
         this.model.scale.set(1.4, 1.4, 1.4);
@@ -2536,12 +2879,12 @@ export class Corridor3DScene {
       (error) => {
         console.error('Erro ao carregar modelo 3D Xbot:', error);
         const loadIndicator = document.getElementById('corridor-3d-loading');
-        if (loadIndicator) loadIndicator.textContent = 'Erro ao carregar modelo 3D.';
+        if (loadIndicator) loadIndicator.style.display = 'none';
       }
     );
   }
 
-  // Personaliza o corpo, veste sobrecasaca gótica bordada, preenche as juntas mecânicas e adiciona cabelos de Elias Crowe
+  // Personaliza o corpo do personagem para deixá-lo completamente roxo elegante conforme solicitado
   customizeEliasCrowe(model, gltf) {
     let surfaceMesh = null;
     let jointsMesh = null;
@@ -2557,270 +2900,41 @@ export class Corridor3DScene {
       }
       if (child.isMesh) {
         child.castShadow = true;
-        child.receiveShadow = true;
+        child.receiveShadow = false;
         if (child.name === 'Beta_Surface') surfaceMesh = child;
         if (child.name === 'Beta_Joints') jointsMesh = child;
       }
     });
 
-    const headBone = this.bones.head;
-    const spine2Bone = this.bones.spine2;
-    const neckBone = this.bones.neck;
+    // Tom roxo etéreo gótico uniforme
+    const purpleMat = new THREE.MeshStandardMaterial({
+      color: 0x7b3fad,
+      roughness: 0.45,
+      metalness: 0.25
+    });
 
-    // Paleta de roupas nobres e tom de pele de Elias Crowe
-    const colSkin = new THREE.Color(0xf5d3b3);       // Tom de pele humano claro e natural
-    const colNeck = new THREE.Color(0xe0bfa2);       // Sombra de pescoço
-    const colFaceShadow = new THREE.Color(0xd2aa89); // Contorno do maxilar
-    const colEyes = new THREE.Color(0x0a0c12);       // Olhos escuros profundos e sobrancelhas
-    const colLips = new THREE.Color(0xbf7b70);       // Lábios naturais masculinos
-    const colCoat = new THREE.Color(0x131828);       // Sobrecasaca preta/azul meia-noite
-    const colVest = new THREE.Color(0x1b2438);       // Colete gótico
-    const colSilver = new THREE.Color(0xccd5e8);     // Bordados de prata
-    const colPants = new THREE.Color(0x11131a);      // Calça escura
-    const colBoots = new THREE.Color(0x0c0b0e);      // Botas pretas
-    const colGlove = new THREE.Color(0x1a1618);      // Luvas de couro
-    const colShirt = new THREE.Color(0x282634);      // Lenço/jabot vitoriano
+    const purpleJointsMat = new THREE.MeshStandardMaterial({
+      color: 0x5e298e,
+      roughness: 0.5,
+      metalness: 0.2
+    });
 
-    // 1. REVESTIR AS JUNTAS/DOBRADIÇAS PARA PARECEREM TECIDO E CORPO HUMANO
-    if (jointsMesh && jointsMesh.geometry) {
-      jointsMesh.visible = true;
-      const jGeo = jointsMesh.geometry;
-      const jPos = jGeo.attributes.position;
-      const jJoint = jGeo.attributes.skinIndex || jGeo.attributes.joints;
-      const jWeight = jGeo.attributes.skinWeight || jGeo.attributes.weights;
-      const jCount = jPos.count;
-      const jColors = new Float32Array(jCount * 3);
-
-      for (let i = 0; i < jCount; i++) {
-        let maxW = 0, domJ = -1;
-        if (jWeight && jJoint) {
-          for (let k = 0; k < 4; k++) {
-            const w = jWeight.getComponent ? jWeight.getComponent(i, k) : 0;
-            const j = jJoint.getComponent ? jJoint.getComponent(i, k) : 0;
-            if (w > maxW) {
-              maxW = w;
-              domJ = j;
-            }
-          }
-        }
-        const y = jPos.getY(i);
-        let c = colCoat;
-
-        // Pescoço da junta: Pele humana de Elias Crowe
-        if (domJ === 4 || y > 1.46) {
-          c = colSkin;
-        }
-        // Dedos/juntas das mãos: Luvas de couro
-        else if (domJ === 12 || domJ === 36 || (domJ >= 13 && domJ <= 32) || (domJ >= 37 && domJ <= 56)) {
-          c = colGlove;
-        }
-        // Pés/tornozelos: Botas pretas
-        else if (domJ === 59 || domJ === 64 || y < 0.38) {
-          c = colBoots;
-        }
-        // Pernas/joelhos: Calça escura de alfaiataria
-        else if ((domJ === 58 || domJ === 63 || domJ === 57 || domJ === 62) && y < 0.88) {
-          c = colPants;
-        }
-        // Cintura/coluna: Tecido da sobrecasaca/colete
-        else {
-          c = colVest;
-        }
-
-        jColors[i * 3] = c.r;
-        jColors[i * 3 + 1] = c.g;
-        jColors[i * 3 + 2] = c.b;
+    if (surfaceMesh) {
+      if (surfaceMesh.geometry && surfaceMesh.geometry.attributes.color) {
+        surfaceMesh.geometry.deleteAttribute('color');
       }
-
-      jGeo.setAttribute('color', new THREE.BufferAttribute(jColors, 3));
-      // Reutiliza e atualiza o material existente para manter o skinning do SkinnedMesh
-      if (jointsMesh.material) {
-        jointsMesh.material.vertexColors = true;
-        jointsMesh.material.needsUpdate = true;
-      }
+      surfaceMesh.material = purpleMat;
+      surfaceMesh.material.vertexColors = false;
+      surfaceMesh.material.needsUpdate = true;
     }
 
-    // 2. VESTIMENTA E ANATOMIA HUMANA NA SUPERFÍCIE (Beta_Surface)
-    if (surfaceMesh && surfaceMesh.geometry) {
-      const geo = surfaceMesh.geometry;
-      const posAttr = geo.attributes.position;
-      const jointAttr = geo.attributes.skinIndex || geo.attributes.joints;
-      const weightAttr = geo.attributes.skinWeight || geo.attributes.weights;
-      const count = posAttr.count;
-      const colors = new Float32Array(count * 3);
-
-      for (let i = 0; i < count; i++) {
-        let x = posAttr.getX(i);
-        let y = posAttr.getY(i);
-        let z = posAttr.getZ(i);
-
-        let maxW = 0, domJoint = -1;
-        if (weightAttr && jointAttr) {
-          for (let k = 0; k < 4; k++) {
-            const w = weightAttr.getComponent ? weightAttr.getComponent(i, k) : 0;
-            const j = jointAttr.getComponent ? jointAttr.getComponent(i, k) : 0;
-            if (w > maxW) {
-              maxW = w;
-              domJoint = j;
-            }
-          }
-        }
-
-        // --- Atribuição de cores das roupas de Elias Crowe ---
-        let c = colCoat;
-
-        // Cabeça e Face de Elias Crowe (joint 5)
-        if (domJoint === 5 || y >= 1.52) {
-          // Rosto frontal (z > 0.05)
-          if (z > 0.05) {
-            // Olhos marcantes e sobrancelhas
-            if (y >= 1.635 && y <= 1.685 && Math.abs(x) >= 0.015 && Math.abs(x) <= 0.065) {
-              c = colEyes;
-            }
-            // Lábios naturais
-            else if (y >= 1.555 && y <= 1.585 && Math.abs(x) <= 0.028) {
-              c = colLips;
-            }
-            // Sombra da linha da mandíbula
-            else if (y <= 1.56 && Math.abs(x) >= 0.04) {
-              c = colFaceShadow;
-            }
-            // Pele do rosto
-            else {
-              c = colSkin;
-            }
-          }
-          // Lateral e parte de trás da cabeça (cabelo ou pele de base)
-          else if (z < 0.0) {
-            c = new THREE.Color(0x0a0c10); // Cabelo preto de base
-          } else {
-            c = colSkin;
-          }
-        }
-        // Mãos: Luvas elegantes de couro
-        else if (
-          domJoint === 12 || domJoint === 36 ||
-          (domJoint >= 13 && domJoint <= 32) ||
-          (domJoint >= 37 && domJoint <= 56)
-        ) {
-          c = colGlove;
-        }
-        // Pés: Botas pretas de montaria
-        else if (domJoint === 59 || domJoint === 64 || y < 0.38) {
-          c = colBoots;
-        }
-        // Pernas: Calça escura de alfaiataria
-        else if ((domJoint === 58 || domJoint === 63 || domJoint === 57 || domJoint === 62) && y < 0.88) {
-          c = colPants;
-        }
-        // Tronco: Sobrecasaca nobre com colete e bordados prateados
-        else {
-          // Centro do peito: Camisa / Jabot / Colete interno
-          if (Math.abs(x) < 0.075 && z > 0.02 && y > 1.05 && y < 1.45) {
-            if (y > 1.36) {
-              c = colShirt;
-            } else if (Math.abs(x) < 0.015) {
-              c = colSilver;
-            } else {
-              c = colVest;
-            }
-          }
-          // Bordados prateados nas lapelas (como na arte oficial)
-          else if (Math.abs(x) >= 0.065 && Math.abs(x) <= 0.095 && z > 0.025 && y > 1.12 && y < 1.42) {
-            c = colSilver;
-          } else {
-            c = colCoat;
-          }
-        }
-
-        colors[i * 3] = c.r;
-        colors[i * 3 + 1] = c.g;
-        colors[i * 3 + 2] = c.b;
+    if (jointsMesh) {
+      if (jointsMesh.geometry && jointsMesh.geometry.attributes.color) {
+        jointsMesh.geometry.deleteAttribute('color');
       }
-
-      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      // Reutiliza e atualiza o material existente para manter o skinning funcionando
-      if (surfaceMesh.material) {
-        surfaceMesh.material.vertexColors = true;
-        surfaceMesh.material.needsUpdate = true;
-      }
-    }
-
-    // 3. CABELO PRETO ONDULADO/REBELDE DE ELIAS CROWE, GOLA ALTA E ORNAMENTOS
-    if (headBone) {
-      const hairGroup = new THREE.Group();
-      hairGroup.name = 'Elias_Hair';
-
-      const hairMat = new THREE.MeshStandardMaterial({
-        color: 0x08090e,
-        roughness: 0.6,
-        metalness: 0.15
-      });
-
-      // Volume do topo da cabeça e nuca (em coordenadas locais do Head bone)
-      const hairBaseGeo = new THREE.SphereGeometry(12.5, 16, 16);
-      hairBaseGeo.scale(0.95, 1.15, 1.25);
-      const hairBase = new THREE.Mesh(hairBaseGeo, hairMat);
-      hairBase.position.set(0, 5.0, -1.8);
-      hairGroup.add(hairBase);
-
-      // Mechas e franja ondulada de Elias Crowe caindo pela testa e laterais
-      const bangsGeo = new THREE.ConeGeometry(2.6, 9.8, 6);
-      bangsGeo.rotateX(-Math.PI / 3);
-
-      const bangPositions = [
-        { x: -4.5, y: 7.5, z: 7.8, rx: 0.4, ry: -0.3, rz: -0.35, s: 1.1 },
-        { x: -1.5, y: 8.2, z: 8.8, rx: 0.5, ry: -0.1, rz: -0.1, s: 1.2 },
-        { x: 2.0, y: 8.0, z: 8.5, rx: 0.48, ry: 0.2, rz: 0.15, s: 1.15 },
-        { x: 5.0, y: 7.2, z: 7.5, rx: 0.35, ry: 0.4, rz: 0.45, s: 1.0 },
-        { x: -8.0, y: 2.0, z: 4.0, rx: 0.2, ry: -0.5, rz: -0.25, s: 1.25 },
-        { x: 8.0, y: 2.0, z: 4.0, rx: 0.2, ry: 0.5, rz: 0.25, s: 1.25 },
-        { x: -7.5, y: -4.0, z: 1.5, rx: 0.1, ry: -0.4, rz: -0.1, s: 1.3 },
-        { x: 7.5, y: -4.0, z: 1.5, rx: 0.1, ry: 0.4, rz: 0.1, s: 1.3 },
-        { x: 0, y: -1.0, z: -8.5, rx: -0.4, ry: 0, rz: 0, s: 1.35 }
-      ];
-
-      bangPositions.forEach((bp) => {
-        const bang = new THREE.Mesh(bangsGeo, hairMat);
-        bang.position.set(bp.x, bp.y, bp.z);
-        bang.rotation.set(bp.rx, bp.ry, bp.rz);
-        bang.scale.set(bp.s, bp.s, bp.s);
-        hairGroup.add(bang);
-      });
-
-      headBone.add(hairGroup);
-    }
-
-    // 4. COLARINHO ALTO VITORIANO E PINGENTE DA LUA CRESCENTE (anexado ao Spine2 ou Neck)
-    const torsoBone = spine2Bone || neckBone;
-    if (torsoBone) {
-      const coatGroup = new THREE.Group();
-      coatGroup.name = 'Elias_CoatDetails';
-
-      const collarMat = new THREE.MeshStandardMaterial({
-        color: 0x0e1322,
-        roughness: 0.6,
-        metalness: 0.2
-      });
-      const collarGeo = new THREE.CylinderGeometry(11.5, 13.5, 12, 14, 1, true, -Math.PI * 0.75, Math.PI * 1.5);
-      const collarMesh = new THREE.Mesh(collarGeo, collarMat);
-      collarMesh.position.set(0, 10.0, 0.5);
-      collarMesh.rotation.x = 0.15;
-      coatGroup.add(collarMesh);
-
-      // Pingente da Lua Crescente com corrente de prata
-      const chainMat = new THREE.MeshStandardMaterial({
-        color: 0xebf2ff,
-        metalness: 0.9,
-        roughness: 0.2
-      });
-      const crescentGeo = new THREE.TorusGeometry(2.0, 0.45, 8, 16, Math.PI * 1.3);
-      const crescent = new THREE.Mesh(crescentGeo, chainMat);
-      crescent.position.set(0, 4.0, 9.5);
-      crescent.rotation.z = Math.PI * 0.35;
-      coatGroup.add(crescent);
-
-      torsoBone.add(coatGroup);
+      jointsMesh.material = purpleJointsMat;
+      jointsMesh.material.vertexColors = false;
+      jointsMesh.material.needsUpdate = true;
     }
   }
 
@@ -2909,6 +3023,24 @@ export class Corridor3DScene {
         // Abrir ou fechar as Configuracoes diretamente pelo teclado (Tecla C ou G)
         if (this.onOpenSettings) {
           this.onOpenSettings();
+        }
+      }
+      if (key === 'k') {
+        // Retomar o jogo (Tecla K)
+        if (this.onResumeGame) {
+          this.onResumeGame();
+        }
+      }
+      if (key === 'j') {
+        // Reiniciar o jogo (Tecla J)
+        if (this.onRestartGame) {
+          this.onRestartGame();
+        }
+      }
+      if (key === 'l') {
+        // Sair do jogo para o menu (Tecla L)
+        if (this.onExitGame) {
+          this.onExitGame();
         }
       }
       if (e.code === 'Space' || e.key === ' ') {
@@ -3118,8 +3250,6 @@ export class Corridor3DScene {
   }
 
   updatePlayer(delta) {
-    if (!this.model) return;
-
     // 1. Suavizar rotação e inclinação da câmera guiada pelo Mouse
     const camLerp = Math.min(1, 14 * delta);
     this.cameraAngles.yaw += (this.cameraAngles.targetYaw - this.cameraAngles.yaw) * camLerp;
@@ -3209,16 +3339,17 @@ export class Corridor3DScene {
       if (curX >= -3.8) {
         // No corredor principal
         const isDoorOpen = this.isBasementDoorOpen || this.doors.some(d => d.id === 'door_basement' && d.isOpen);
-        const minX = (isDoorOpen && curZ >= -5.2 && curZ <= -2.8) ? -11.0 : -3.1;
-        const maxX = 3.1;
+        // Permitir que o jogador se aproxime do batente e passe livremente quando a porta estiver aberta
+        const minX = (isDoorOpen && curZ >= -5.6 && curZ <= -2.4) ? -11.0 : -3.6;
+        const maxX = 3.6;
         const minZ = -33.5;
-        const maxZ = 24.0;
+        const maxZ = 24.5;
         this.player.position.x = Math.max(minX, Math.min(maxX, this.player.position.x));
         this.player.position.z = Math.max(minZ, Math.min(maxZ, this.player.position.z));
       } else if (curX > -10.5) {
         // Descendo ou subindo a escadaria de pedra
-        this.player.position.z = Math.max(-4.95, Math.min(-3.05, this.player.position.z));
-        this.player.position.x = Math.max(-27.0, Math.min(3.1, this.player.position.x));
+        this.player.position.z = Math.max(-5.2, Math.min(-2.8, this.player.position.z));
+        this.player.position.x = Math.max(-27.0, Math.min(3.6, this.player.position.x));
       } else {
         // Dentro da Sala da Diretoria no Porão
         const isVao = (curZ >= -5.2 && curZ <= -2.8);
@@ -3279,18 +3410,19 @@ export class Corridor3DScene {
       }
     }
 
-    // Atualizar posição do modelo 3D
-    this.model.position.copy(this.player.position);
-    this.model.rotation.y = this.player.rotationY;
+    // Atualizar posição do modelo 3D (se já carregado)
+    if (this.model) {
+      this.model.position.copy(this.player.position);
+      this.model.rotation.y = this.player.rotationY;
+      const isFirstPerson = this.cameraAngles.isFirstPerson || this.cameraAngles.distance < 0.35;
+      this.model.visible = !isFirstPerson;
+    }
 
     // Suavizar distância da câmera (para zoom suave)
     this.cameraAngles.distance += (this.cameraAngles.targetDistance - this.cameraAngles.distance) * 10.0 * delta;
 
-    // Ocultar modelo do personagem no modo de primeira pessoa para não obstruir a visão
-    const isFirstPerson = this.cameraAngles.isFirstPerson || this.cameraAngles.distance < 0.35;
-    this.model.visible = !isFirstPerson;
-
     // 5. Câmera: Primeira Pessoa vs Terceira Pessoa Orbital
+    const isFirstPerson = this.cameraAngles.isFirstPerson || this.cameraAngles.distance < 0.35;
     if (isFirstPerson) {
       // Olhos do personagem: altura 1.62m
       const eyeHeight = 1.62;

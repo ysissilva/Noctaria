@@ -101,15 +101,10 @@ class NoctariaGame {
 
 
   resetGame() {
-
     this.state = JSON.parse(JSON.stringify(INITIAL_STATE));
-
     this.saveGame();
-
-    this.changeChapter('prologue', false);
-
-    this.startDialogue('elias_arrival', 'start');
-
+    // Entrar diretamente no jogo (exploração 3D)
+    this.enter3DCorridor();
   }
 
 
@@ -792,8 +787,6 @@ class NoctariaGame {
 
               <span>INICIAR AVENTURA</span>
 
-              <span class="btn-icon">✦</span>
-
             </button>
 
 
@@ -802,18 +795,6 @@ class NoctariaGame {
 
               <span>CONTINUAR</span>
 
-              <span class="btn-icon">🕮</span>
-
-            </button>
-
-
-
-            <button class="btn-gothic" id="btn-characters">
-
-              <span>PERSONAGENS</span>
-
-              <span class="btn-icon">👥</span>
-
             </button>
 
 
@@ -821,8 +802,6 @@ class NoctariaGame {
             <button class="btn-gothic" id="btn-settings">
 
               <span>CONFIGURAÇÕES</span>
-
-              <span class="btn-icon">⚙</span>
 
             </button>
 
@@ -837,21 +816,7 @@ class NoctariaGame {
 
 
     document.getElementById('btn-start-game').onclick = () => {
-
-      if (hasSavedGame) {
-
-        if (confirm('Existe uma jornada gravada neste navegador. Deseja reiniciar a história e sobrepor seu progresso?')) {
-
-          this.resetGame();
-
-        }
-
-      } else {
-
-        this.resetGame();
-
-      }
-
+      this.resetGame();
     };
 
 
@@ -874,7 +839,10 @@ class NoctariaGame {
 
 
 
-    document.getElementById('btn-characters').onclick = () => this.openCharactersModal();
+    const charBtn = document.getElementById('btn-characters');
+    if (charBtn) {
+      charBtn.onclick = () => this.openCharactersModal();
+    }
 
     document.getElementById('btn-settings').onclick = () => this.openSettingsModal();
 
@@ -898,40 +866,64 @@ class NoctariaGame {
       <div class="corridor-3d-screen" id="corridor-3d-screen">
         <div id="corridor-3d-canvas-container"></div>
 
-        <div class="corridor-loading" id="corridor-3d-loading">Carregando ${isBasement ? 'Sala da Diretoria' : 'Corredor de Noctária'}...</div>
+        <div class="corridor-loading" id="corridor-3d-loading" style="display:none;"></div>
 
         <div class="corridor-hud">
           <div class="corridor-hud-title">${hudTitle}</div>
           <div class="corridor-hud-desc">${hudDesc}</div>
         </div>
 
-        <div class="corridor-top-bar" id="corridor-top-bar" style="position:absolute; top:18px; right:24px; display:flex; gap:10px; z-index:90;">
-          <button class="btn-gothic" id="corridor-journal-btn" style="padding:6px 14px; font-size:0.78rem;" title="Abrir Diário">📖 DIÁRIO</button>
-          <button class="btn-gothic" id="corridor-inv-btn" style="padding:6px 14px; font-size:0.78rem;" title="Abrir Inventário">🎒 INVENTÁRIO</button>
-          <button class="btn-gothic" id="corridor-chars-btn" style="padding:6px 14px; font-size:0.78rem;" title="Ver Personagens">👥 PERSONAGENS</button>
-          <button class="btn-gothic" id="corridor-mainmenu-btn" style="padding:6px 14px; font-size:0.78rem;" title="Voltar ao Menu">🚪 MENU</button>
-        </div>
-
         <div class="corridor-mini-menu-wrapper" id="corridor-mini-menu-wrapper">
-          <button class="corridor-menu-toggle-btn" id="corridor-menu-toggle-btn" title="Abrir Menu de Controles e Configurações (Tecla F)">
-            <span>☰ MENU</span>
+          <button class="corridor-menu-toggle-btn" id="corridor-menu-toggle-btn" title="Menu (Tecla F)">
+            <span>MENU</span>
             <span class="corridor-key" style="margin-left: 8px;">F</span>
           </button>
 
           <div class="corridor-mini-menu-panel" id="corridor-mini-menu-panel">
             <div class="corridor-mini-menu-header">
-              <span>Menu Rápido</span>
+              <span>Menu</span>
               <button class="corridor-mini-menu-close" id="corridor-mini-menu-close" aria-label="Fechar">&times;</button>
             </div>
 
-            <div class="corridor-mini-menu-section-title">Controles</div>
+            <div class="corridor-mini-menu-section-title">Ações</div>
+            <div class="corridor-mini-menu-actions">
+              <button class="btn-gothic corridor-menu-btn" id="corridor-resume-btn" title="Retomar o Jogo (Tecla K)">
+                <span>RETOMAR JOGO</span>
+                <span class="corridor-key" style="margin-left: 8px;">K</span>
+              </button>
+
+              <button class="btn-gothic corridor-menu-btn" id="corridor-restart-btn" title="Reiniciar o Jogo (Tecla J)">
+                <span>REINICIAR JOGO</span>
+                <span class="corridor-key" style="margin-left: 8px;">J</span>
+              </button>
+
+              <button class="btn-gothic corridor-menu-btn" id="corridor-exit-btn" title="Sair do Jogo para o Menu (Tecla L)">
+                <span>SAIR DO JOGO</span>
+                <span class="corridor-key" style="margin-left: 8px;">L</span>
+              </button>
+
+              <button class="btn-gothic corridor-menu-btn" id="corridor-journal-btn" title="Abrir Diário">
+                <span>DIÁRIO</span>
+              </button>
+
+              <button class="btn-gothic corridor-menu-btn" id="corridor-inv-btn" title="Abrir Inventário">
+                <span>INVENTÁRIO</span>
+              </button>
+
+              <button class="btn-gothic corridor-settings-btn" id="corridor-open-settings-btn" title="Abrir Configurações (Tecla C)">
+                <span>CONFIGURAÇÕES</span>
+                <span class="corridor-key" style="margin-left: 8px;">C</span>
+              </button>
+            </div>
+
+            <div class="corridor-mini-menu-section-title" style="margin-top: 10px;">Controles</div>
             <div class="corridor-controls-guide">
               <div class="corridor-ctrl-row">
                 <span class="corridor-key">W</span>
                 <span class="corridor-key">A</span>
                 <span class="corridor-key">S</span>
                 <span class="corridor-key">D</span>
-                <span>Mover Personagem</span>
+                <span>Mover</span>
               </div>
               <div class="corridor-ctrl-row">
                 <span class="corridor-key">Espaço</span>
@@ -941,31 +933,18 @@ class NoctariaGame {
               </div>
               <div class="corridor-ctrl-row">
                 <span class="corridor-key">E</span>
-                <span>Interagir com Portas</span>
+                <span>Interagir</span>
                 <span class="corridor-key" style="margin-left: 8px;">V</span>
                 <span>1ª / 3ª Pessoa</span>
               </div>
               <div class="corridor-ctrl-row">
-                <span class="corridor-key">F</span>
-                <span>Abrir / Fechar Menu</span>
-                <span class="corridor-key" style="margin-left: 8px;">C</span>
-                <span>Configurações</span>
+                <span class="corridor-key">K</span>
+                <span>Retomar</span>
+                <span class="corridor-key" style="margin-left: 8px;">J</span>
+                <span>Reiniciar</span>
+                <span class="corridor-key" style="margin-left: 8px;">L</span>
+                <span>Sair</span>
               </div>
-              <div class="corridor-ctrl-row">
-                <span class="corridor-key">Scroll</span>
-                <span>Zoom Câmera / 1ª Pessoa</span>
-              </div>
-              <div class="corridor-ctrl-row">
-                <span class="corridor-key">Mouse</span>
-                <span>Girar Câmera (Clique na tela para travar)</span>
-              </div>
-            </div>
-
-            <div class="corridor-mini-menu-actions">
-              <button class="btn-gothic corridor-settings-btn" id="corridor-open-settings-btn" title="Abrir Configurações (Tecla C)">
-                <span>⚙ CONFIGURAÇÕES</span>
-                <span class="corridor-key" style="margin-left: 8px;">C</span>
-              </button>
             </div>
           </div>
         </div>
@@ -1020,11 +999,50 @@ class NoctariaGame {
       }
     };
 
-    // Conectar botões da barra superior 3D
+    // Ações do menu: Retomar (K), Reiniciar (J), Sair (L)
+    const resumeGame = () => {
+      if (menuPanel) menuPanel.classList.remove('open');
+      if (this.activeModal) this.closeModal();
+      audioSystem.playUi('click');
+    };
+
+    const restartGame = () => {
+      if (confirm('Deseja realmente reiniciar o jogo do início? Seu progresso atual será reiniciado.')) {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        if (this.activeCorridor3D) {
+          this.activeCorridor3D.dispose();
+          this.activeCorridor3D = null;
+        }
+        this.resetGame();
+      }
+    };
+
+    const exitGame = () => {
+      if (confirm('Deseja sair do jogo e retornar ao menu principal?')) {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        if (this.activeCorridor3D) {
+          this.activeCorridor3D.dispose();
+          this.activeCorridor3D = null;
+        }
+        this.renderMainMenu();
+      }
+    };
+
+    const resumeBtn = document.getElementById('corridor-resume-btn');
+    if (resumeBtn) resumeBtn.onclick = () => resumeGame();
+
+    const restartBtn = document.getElementById('corridor-restart-btn');
+    if (restartBtn) restartBtn.onclick = () => restartGame();
+
+    const exitBtn = document.getElementById('corridor-exit-btn');
+    if (exitBtn) exitBtn.onclick = () => exitGame();
+
+    // Conectar botões adicionais no menu rápido
     const journalBtn = document.getElementById('corridor-journal-btn');
     if (journalBtn) {
       journalBtn.onclick = () => {
         if (document.pointerLockElement) document.exitPointerLock?.();
+        if (menuPanel) menuPanel.classList.remove('open');
         this.openJournalModal();
       };
     }
@@ -1032,31 +1050,17 @@ class NoctariaGame {
     if (invBtn) {
       invBtn.onclick = () => {
         if (document.pointerLockElement) document.exitPointerLock?.();
+        if (menuPanel) menuPanel.classList.remove('open');
         this.openInventoryModal();
-      };
-    }
-    const charsBtn = document.getElementById('corridor-chars-btn');
-    if (charsBtn) {
-      charsBtn.onclick = () => {
-        if (document.pointerLockElement) document.exitPointerLock?.();
-        this.openCharactersModal();
-      };
-    }
-    const mainMenuBtn = document.getElementById('corridor-mainmenu-btn');
-    if (mainMenuBtn) {
-      mainMenuBtn.onclick = () => {
-        if (document.pointerLockElement) document.exitPointerLock?.();
-        if (this.activeCorridor3D) {
-          this.activeCorridor3D.dispose();
-          this.activeCorridor3D = null;
-        }
-        this.renderMainMenu();
       };
     }
 
     const container = document.getElementById('corridor-3d-canvas-container');
     this.activeCorridor3D = new Corridor3DScene(container, {
       startInBasement: isBasement,
+      onResumeGame: () => resumeGame(),
+      onRestartGame: () => restartGame(),
+      onExitGame: () => exitGame(),
       onInteract: () => {
         this.exit3DCorridor();
       },
@@ -1094,11 +1098,24 @@ class NoctariaGame {
         this.examineStairPainting();
       },
       onEnterLibrary: () => {
-        if (this.flags.phase1Completed) {
+        const allCluesFound = (this.flags.noticeBoardExamined && this.flags.erasedPhotoExamined && this.flags.alteredLedgerExamined) || this.flags.phase1Completed;
+        if (allCluesFound) {
+          if (this.activeCorridor3D && this.activeCorridor3D.libraryGateProps) {
+            this.activeCorridor3D.libraryGateProps.isUnlocked = true;
+            if (this.activeCorridor3D.libraryGateProps.padlockGroup) {
+              this.activeCorridor3D.libraryGateProps.padlockGroup.visible = false;
+            }
+            if (this.activeCorridor3D.libraryGateProps.ironGateGroup) {
+              this.activeCorridor3D.libraryGateProps.ironGateGroup.rotation.y = Math.PI * 0.45;
+            }
+          }
+          this.showNotification('✦ O cadeado se abre e o portal para a Biblioteca Velada foi liberado! ✦', 'quest');
           if (document.pointerLockElement) document.exitPointerLock?.();
-          this.changeChapter('phase_2');
+          setTimeout(() => {
+            this.changeChapter('phase_2');
+          }, 800);
         } else {
-          this.showNotification('🔒 A passagem permanece selada. Conclua as investigações de Seraphine primeiro!', 'warning');
+          this.showNotification('🔒 O portão está trancado com um cadeado de ferro. Visualize todas as pistas da sala para atravessar o portal!', 'warning');
         }
       }
     });
