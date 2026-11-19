@@ -2863,23 +2863,9 @@ class NoctariaGame {
     modalBackdrop.className = 'modal-backdrop';
     modalBackdrop.id = 'active-modal';
     modalBackdrop.innerHTML = `
-      <div class="gothic-modal" role="dialog" aria-modal="true" aria-labelledby="gothic-modal-title">
-        <!-- Top Academy Crest -->
-        <div class="modal-academy-crest">${this.getAcademyCrestSvg()}</div>
-
-        <!-- Top-left 4-point star emblem -->
-        <div class="modal-corner-star" aria-hidden="true">✦</div>
-
-        <!-- Gothic Roses on corners -->
-        <div class="modal-rose rose-top-left">${this.getGothicRoseSvg()}</div>
-        <div class="modal-rose rose-bottom-left">${this.getGothicRoseSvg()}</div>
-        <div class="modal-rose rose-bottom-right">${this.getGothicRoseSvg()}</div>
-
-        <!-- Bottom center star ornament -->
-        <div class="modal-bottom-star" aria-hidden="true">✦</div>
-
-        <!-- Close Button (Top Right) -->
-        <button class="modal-close-btn" id="modal-close-x" aria-label="Fechar">✕</button>
+      <div class="gothic-modal gothic-modal-image-frame" role="dialog" aria-modal="true" aria-labelledby="gothic-modal-title">
+        <!-- Close Button aligned over the ornate X in the top-right corner of the frame -->
+        <button class="modal-close-btn" id="modal-close-x" aria-label="Fechar" title="Fechar">&times;</button>
 
         <div class="modal-inner-frame">
           <div class="modal-header">

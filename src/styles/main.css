@@ -1082,23 +1082,25 @@ body, html {
   to { opacity: 0; }
 }
 
-.gothic-modal {
+.gothic-modal.gothic-modal-image-frame {
   position: relative;
-  width: min(880px, 92vw);
-  max-height: 80vh;
-  background: radial-gradient(ellipse at 50% 0%, rgba(45, 22, 82, 0.36) 0%, rgba(8, 9, 18, 0.92) 55%, rgba(4, 5, 12, 0.95) 100%);
-  border: 2px solid #8c92ac;
-  outline: 1px solid rgba(165, 138, 232, 0.45);
-  outline-offset: -6px;
-  box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.95),
-    0 0 38px rgba(139, 92, 246, 0.28),
-    inset 0 0 28px rgba(139, 92, 246, 0.14);
-  border-radius: 10px;
+  width: min(960px, 94vw);
+  min-height: 360px;
+  max-height: 86vh;
+  background-color: transparent;
+  background-image: url('/assets/images/ui/modal_frame.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   overflow: visible;
-  backdrop-filter: blur(18px);
+  backdrop-filter: none;
+  filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.92));
   animation: gothicModalOpen 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -1116,130 +1118,48 @@ body, html {
   to { opacity: 0; transform: scale(0.96) translateY(8px); }
 }
 
-.modal-inner-frame {
+.gothic-modal-image-frame .modal-inner-frame {
   display: flex;
   flex-direction: column;
-  max-height: 80vh;
+  max-height: 86vh;
   overflow: hidden;
-  border-radius: 8px;
+  padding: 68px 66px 46px 66px;
+  box-sizing: border-box;
 }
 
-/* Top Academy Crest */
-.modal-academy-crest {
-  position: absolute;
-  top: -48px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 190px;
-  height: 78px;
-  pointer-events: none;
-  z-index: 6;
-  filter: drop-shadow(0 4px 14px rgba(139, 92, 246, 0.55));
-}
-
-.gothic-crest-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-/* Corner Stars */
-.modal-corner-star,
-.modal-bottom-star {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #2a184a 0%, #0b0d1b 75%);
-  border: 1.5px solid #9ca3af;
-  box-shadow: 0 0 14px rgba(165, 138, 232, 0.6);
-  color: #d8b4fe;
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 6;
-}
-
-.modal-corner-star {
-  top: -13px;
-  left: -13px;
-}
-
-.modal-bottom-star {
-  bottom: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* Gothic Roses */
-.modal-rose {
-  position: absolute;
-  width: 44px;
-  height: 44px;
-  pointer-events: none;
-  z-index: 5;
-  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 8px rgba(139, 92, 246, 0.45));
-}
-
-.gothic-rose-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.modal-rose.rose-top-left {
-  top: 12px;
-  left: -14px;
-  width: 38px;
-  height: 38px;
-}
-
-.modal-rose.rose-bottom-left {
-  bottom: -12px;
-  left: -12px;
-}
-
-.modal-rose.rose-bottom-right {
-  bottom: -12px;
-  right: -12px;
-  transform: scaleX(-1);
-}
-
-.modal-header {
-  padding: 26px 56px 14px 36px;
-  background: linear-gradient(180deg, rgba(16, 12, 32, 0.72) 0%, rgba(8, 10, 22, 0.25) 100%);
+.gothic-modal-image-frame .modal-header {
+  padding: 8px 40px 12px 40px;
+  background: transparent;
   border-bottom: 1px solid rgba(194, 194, 212, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .modal-title {
   font-family: var(--font-title);
-  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-size: clamp(1.05rem, 1.9vw, 1.35rem);
   letter-spacing: 0.14em;
   color: #e2d4ff;
   text-shadow: 0 2px 12px rgba(165, 138, 232, 0.45);
   font-weight: 700;
 }
 
-/* Circular Ornate Close Button (Top Right) */
-.modal-close-btn {
+/* Hit-target aligned directly over the ornate X circle in the top-right corner of the frame */
+.gothic-modal-image-frame .modal-close-btn {
   position: absolute;
-  top: -14px;
-  right: -14px;
-  width: 36px;
-  height: 36px;
+  top: 10.5%;
+  right: 4.1%;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: radial-gradient(circle, #251542 0%, #0b0d1b 80%);
-  border: 1.5px solid #b7b7c8;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.9), 0 0 14px rgba(165, 138, 232, 0.55);
-  color: #e5e7eb;
-  font-size: 1rem;
-  font-weight: 600;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: transparent;
+  font-size: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1248,15 +1168,15 @@ body, html {
   transition: all 0.22s ease;
 }
 
-.modal-close-btn:hover {
-  color: #fff;
-  border-color: #d8b4fe;
-  transform: scale(1.1) rotate(90deg);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.95), 0 0 22px rgba(165, 138, 232, 0.85);
+.gothic-modal-image-frame .modal-close-btn:hover {
+  background: rgba(165, 138, 232, 0.18);
+  border-color: rgba(216, 180, 254, 0.65);
+  box-shadow: 0 0 18px rgba(165, 138, 232, 0.75);
+  transform: scale(1.08);
 }
 
-.modal-body {
-  padding: 22px 30px 26px;
+.gothic-modal-image-frame .modal-body {
+  padding: 18px 16px 12px;
   overflow-y: auto;
   flex: 1;
 }
@@ -1299,26 +1219,26 @@ body, html {
 
 @media (max-width: 640px) {
   .modal-backdrop {
-    padding: 40px 14px 20px;
+    padding: 24px 8px 16px;
   }
-  .modal-academy-crest {
-    width: 150px;
-    height: 62px;
-    top: -38px;
+  .gothic-modal.gothic-modal-image-frame {
+    width: 96vw;
+    min-height: 280px;
   }
-  .modal-rose {
-    width: 32px;
-    height: 32px;
+  .gothic-modal-image-frame .modal-inner-frame {
+    padding: 46px 28px 32px 28px;
   }
-  .modal-rose.rose-top-left {
-    width: 28px;
-    height: 28px;
+  .gothic-modal-image-frame .modal-header {
+    padding: 6px 28px 10px 28px;
   }
-  .modal-header {
-    padding: 22px 36px 12px 24px;
+  .gothic-modal-image-frame .modal-close-btn {
+    width: 30px;
+    height: 30px;
+    top: 9.5%;
+    right: 3.8%;
   }
-  .modal-body {
-    padding: 16px 18px 20px;
+  .gothic-modal-image-frame .modal-body {
+    padding: 12px 8px 8px;
   }
 }
 
