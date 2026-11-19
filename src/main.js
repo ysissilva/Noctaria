@@ -3146,51 +3146,139 @@ class NoctariaGame {
   }
 
   openSettingsModal() {
+    this.closeModal();
+    if (this.activeModal) {
+      this.activeModal.remove();
+      this.activeModal = null;
+    }
+    if (this._modalEscHandler) {
+      document.removeEventListener('keydown', this._modalEscHandler);
+      this._modalEscHandler = null;
+    }
+
     const s = this.state.settings;
-    const html = `
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <div class="setting-row">
-          <label class="setting-label" for="music-vol">Volume da Música</label>
-          <input type="range" id="music-vol" min="0" max="100" value="${s.musicVolume}" style="accent-color:var(--color-luminous-purple); cursor:pointer;">
+    const isCurrentlyFullscreen = Boolean(document.fullscreenElement);
+
+    const modalBackdrop = document.createElement('div');
+    modalBackdrop.className = 'modal-backdrop';
+    modalBackdrop.id = 'active-modal';
+    modalBackdrop.innerHTML = `
+      <div class="settings-modal-shell" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+        <div class="settings-rose settings-rose-tl" aria-hidden="true">${this.getGothicRoseSvg()}</div>
+        <div class="settings-rose settings-rose-br" aria-hidden="true">${this.getGothicRoseSvg()}</div>
+
+        <button type="button" class="settings-close-x" id="settings-close-x" aria-label="Fechar e cancelar alterações" title="Fechar">✕</button>
+
+        <div class="settings-modal-header">
+          <span class="settings-title-star" aria-hidden="true">✦</span>
+          <h2 class="settings-modal-title" id="settings-modal-title">CONFIGURAÇÕES</h2>
         </div>
-        <div class="setting-row">
-          <label class="setting-label" for="sfx-vol">Volume dos Efeitos Sonoros</label>
-          <input type="range" id="sfx-vol" min="0" max="100" value="${s.sfxVolume}" style="accent-color:var(--color-luminous-purple); cursor:pointer;">
+
+        <div class="settings-modal-body">
+          <div class="settings-row">
+            <label class="settings-row-label" for="music-vol">
+              <span class="settings-row-icon" aria-hidden="true">♫</span>
+              <span>VOLUME DA MÚSICA</span>
+            </label>
+            <div class="settings-row-control settings-slider-group">
+              <input type="range" class="settings-range" id="music-vol" min="0" max="100" value="${s.musicVolume}">
+              <span class="settings-vol-icon" aria-hidden="true">🔊</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-row-label" for="sfx-vol">
+              <span class="settings-row-icon" aria-hidden="true">🔊</span>
+              <span>VOLUME DOS EFEITOS SONOROS</span>
+            </label>
+            <div class="settings-row-control settings-slider-group">
+              <input type="range" class="settings-range" id="sfx-vol" min="0" max="100" value="${s.sfxVolume}">
+              <span class="settings-vol-icon" aria-hidden="true">🔊</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-row-label" for="speed-select">
+              <span class="settings-row-icon" aria-hidden="true">⌨</span>
+              <span>VELOCIDADE DO TEXTO</span>
+            </label>
+            <div class="settings-row-control">
+              <select class="settings-select" id="speed-select">
+                <option value="normal" ${s.textSpeed === 'normal' ? 'selected' : ''}>Normal</option>
+                <option value="fast" ${s.textSpeed === 'fast' ? 'selected' : ''}>Rápida</option>
+                <option value="instant" ${s.textSpeed === 'instant' ? 'selected' : ''}>Instantânea</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-row-label" for="screen-mode-select">
+              <span class="settings-row-icon" aria-hidden="true">⚙</span>
+              <span>MODO TELA</span>
+            </label>
+            <div class="settings-row-control">
+              <select class="settings-select" id="screen-mode-select">
+                <option value="windowed" ${!isCurrentlyFullscreen ? 'selected' : ''}>Modo Janela</option>
+                <option value="fullscreen" ${isCurrentlyFullscreen ? 'selected' : ''}>Tela Cheia</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="setting-row">
-          <label class="setting-label" for="speed-select">Velocidade do Texto</label>
-          <select id="speed-select" style="background:var(--color-night-dark); color:#fff; border:1px solid var(--color-aged-silver); padding:6px 12px; border-radius:4px;">
-            <option value="normal" ${s.textSpeed === 'normal' ? 'selected' : ''}>Normal</option>
-            <option value="fast" ${s.textSpeed === 'fast' ? 'selected' : ''}>Rápida</option>
-            <option value="instant" ${s.textSpeed === 'instant' ? 'selected' : ''}>Instantânea</option>
-          </select>
+
+        <div class="settings-bottom-divider" aria-hidden="true">
+          <span class="settings-divider-line"></span>
+          <span class="settings-divider-star">✦</span>
+          <span class="settings-divider-line"></span>
         </div>
-        <div class="setting-row">
-          <label class="setting-label" for="fullscreen-toggle">Modo Tela Cheia</label>
-          <button class="btn-gothic" id="fullscreen-toggle" style="padding:6px 14px; font-size:0.85rem;">Alternar</button>
-        </div>
-        <div style="margin-top:20px; display:flex; justify-content:flex-end;">
-          <button class="btn-gothic btn-primary" id="save-settings-btn">Salvar Configurações</button>
+
+        <div class="settings-modal-actions">
+          <button type="button" class="settings-btn settings-btn-cancel" id="settings-cancel-btn">Cancelar</button>
+          <button type="button" class="settings-btn settings-btn-confirm" id="settings-confirm-btn">Confirmar</button>
         </div>
       </div>
     `;
-    this.openModal('Configurações', html);
 
-    document.getElementById('fullscreen-toggle').onclick = () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
+    this.root.appendChild(modalBackdrop);
+    this.activeModal = modalBackdrop;
+
+    // Mesma função para X, Cancelar, ESC e clique fora: fecha imediatamente sem aplicar nem salvar alterações
+    const cancelAndClose = () => {
+      this.closeModal();
     };
 
-    document.getElementById('save-settings-btn').onclick = () => {
-      this.state.settings.musicVolume = parseInt(document.getElementById('music-vol').value);
-      this.state.settings.sfxVolume = parseInt(document.getElementById('sfx-vol').value);
+    document.getElementById('settings-close-x').onclick = (e) => {
+      e.stopPropagation();
+      cancelAndClose();
+    };
+
+    document.getElementById('settings-cancel-btn').onclick = () => {
+      cancelAndClose();
+    };
+
+    modalBackdrop.onclick = (e) => {
+      if (e.target === modalBackdrop) cancelAndClose();
+    };
+
+    this._modalEscHandler = (e) => {
+      if (e.key === 'Escape') cancelAndClose();
+    };
+    document.addEventListener('keydown', this._modalEscHandler);
+
+    document.getElementById('settings-confirm-btn').onclick = () => {
+      this.state.settings.musicVolume = parseInt(document.getElementById('music-vol').value, 10);
+      this.state.settings.sfxVolume = parseInt(document.getElementById('sfx-vol').value, 10);
       this.state.settings.textSpeed = document.getElementById('speed-select').value;
+
+      const selectedScreenMode = document.getElementById('screen-mode-select').value;
+      if (selectedScreenMode === 'fullscreen' && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else if (selectedScreenMode === 'windowed' && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+
       this.saveGame();
       this.closeModal();
-      this.showNotification('Configurações salvas!', 'info');
+      this.showNotification('Configurações salvas e aplicadas!', 'info');
     };
   }
 
