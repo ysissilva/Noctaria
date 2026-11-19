@@ -1070,6 +1070,7 @@ body, html {
 
 .modal-backdrop.is-closing {
   animation: modalBackdropOut 0.22s ease forwards;
+  pointer-events: none;
 }
 
 @keyframes modalBackdropIn {
@@ -2542,6 +2543,7 @@ body, html {
 .settings-modal-shell {
   position: relative;
   width: min(740px, 92vw);
+  overflow: visible;
   background: linear-gradient(180deg, rgba(14, 13, 25, 0.94) 0%, rgba(8, 8, 16, 0.96) 100%);
   border: 1.5px solid rgba(178, 154, 240, 0.55);
   outline: 1px solid rgba(194, 194, 212, 0.18);
@@ -2596,8 +2598,9 @@ body, html {
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
   cursor: pointer;
-  z-index: 8;
+  z-index: 50;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 

@@ -2926,7 +2926,7 @@ class NoctariaGame {
     }
   }
 
-  closeModal() {
+  closeModal(immediate = false) {
     if (this._modalEscHandler) {
       document.removeEventListener('keydown', this._modalEscHandler);
       this._modalEscHandler = null;
@@ -2934,12 +2934,17 @@ class NoctariaGame {
     if (this.activeModal) {
       const closingEl = this.activeModal;
       this.activeModal = null;
+      closingEl.style.pointerEvents = 'none';
+      if (immediate) {
+        closingEl.remove();
+        return;
+      }
       closingEl.classList.add('is-closing');
       setTimeout(() => {
         if (closingEl && closingEl.parentNode) {
           closingEl.remove();
         }
-      }, 220);
+      }, 200);
     }
   }
 
@@ -3146,15 +3151,8 @@ class NoctariaGame {
   }
 
   openSettingsModal() {
-    this.closeModal();
-    if (this.activeModal) {
-      this.activeModal.remove();
-      this.activeModal = null;
-    }
-    if (this._modalEscHandler) {
-      document.removeEventListener('keydown', this._modalEscHandler);
-      this._modalEscHandler = null;
-    }
+    this.closeModal(true);
+    document.querySelectorAll('#active-modal').forEach((el) => el.remove());
 
     const s = this.state.settings;
     const isCurrentlyFullscreen = Boolean(document.fullscreenElement);
@@ -3243,43 +3241,68 @@ class NoctariaGame {
 
     // Mesma função para X, Cancelar, ESC e clique fora: fecha imediatamente sem aplicar nem salvar alterações
     const cancelAndClose = () => {
-      this.closeModal();
+      if (this._modalEscHandler) {
+        document.removeEventListener('keydown', this._modalEscHandler);
+        this._modalEscHandler = null;
+      }
+      this.activeModal = null;
+      if (modalBackdrop && modalBackdrop.parentNode) {
+        modalBackdrop.remove();
+      }
     };
 
-    document.getElementById('settings-close-x').onclick = (e) => {
-      e.stopPropagation();
-      cancelAndClose();
-    };
+    const closeXBtn = modalBackdrop.querySelector('#settings-close-x');
+    const cancelBtn = modalBackdrop.querySelector('#settings-cancel-btn');
+    const confirmBtn = modalBackdrop.querySelector('#settings-confirm-btn');
 
-    document.getElementById('settings-cancel-btn').onclick = () => {
-      cancelAndClose();
-    };
+    if (closeXBtn) {
+      closeXBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelAndClose();
+      });
+    }
 
-    modalBackdrop.onclick = (e) => {
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelAndClose();
+      });
+    }
+
+    modalBackdrop.addEventListener('click', (e) => {
       if (e.target === modalBackdrop) cancelAndClose();
-    };
+    });
 
     this._modalEscHandler = (e) => {
       if (e.key === 'Escape') cancelAndClose();
     };
     document.addEventListener('keydown', this._modalEscHandler);
 
-    document.getElementById('settings-confirm-btn').onclick = () => {
-      this.state.settings.musicVolume = parseInt(document.getElementById('music-vol').value, 10);
-      this.state.settings.sfxVolume = parseInt(document.getElementById('sfx-vol').value, 10);
-      this.state.settings.textSpeed = document.getElementById('speed-select').value;
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const musicEl = modalBackdrop.querySelector('#music-vol');
+        const sfxEl = modalBackdrop.querySelector('#sfx-vol');
+        const speedEl = modalBackdrop.querySelector('#speed-select');
+        const screenEl = modalBackdrop.querySelector('#screen-mode-select');
 
-      const selectedScreenMode = document.getElementById('screen-mode-select').value;
-      if (selectedScreenMode === 'fullscreen' && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else if (selectedScreenMode === 'windowed' && document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
+        if (musicEl) this.state.settings.musicVolume = parseInt(musicEl.value, 10);
+        if (sfxEl) this.state.settings.sfxVolume = parseInt(sfxEl.value, 10);
+        if (speedEl) this.state.settings.textSpeed = speedEl.value;
 
-      this.saveGame();
-      this.closeModal();
-      this.showNotification('Configurações salvas e aplicadas!', 'info');
-    };
+        const selectedScreenMode = screenEl ? screenEl.value : 'windowed';
+        if (selectedScreenMode === 'fullscreen' && !document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else if (selectedScreenMode === 'windowed' && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+
+        this.saveGame();
+        cancelAndClose();
+        this.showNotification('Configurações salvas e aplicadas!', 'info');
+      });
+    }
   }
 
   openCreditsModal() {
