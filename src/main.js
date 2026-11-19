@@ -2769,35 +2769,191 @@ class NoctariaGame {
     }
   }
 
-  // --- MODALS (DIÁRIO, INVENTÁRIO, PERSONAGENS, INSPECT, SETTINGS, CRÉDITOS) ---
-  openModal(title, contentHtml) {
-    this.closeModal();
+  // --- MODALS (SISTEMA GÓTICO ORNAMENTADO COM CONTEÚDO DINÂMICO) ---
+  buildModalBodyHtml(contentOrOptions) {
+    if (typeof contentOrOptions === 'string') {
+      return contentOrOptions;
+    }
+    const opts = contentOrOptions || {};
+    if (opts.html) return opts.html;
+
+    const imageHtml = opts.image
+      ? `<div class="modal-dynamic-image-wrap"><img src="${opts.image}" alt="${opts.title || 'Imagem'}" class="modal-dynamic-image"></div>`
+      : '';
+    const textHtml = opts.text
+      ? `<div class="modal-dynamic-text">${String(opts.text).replace(/\n/g, '<br>')}</div>`
+      : '';
+    const buttonsHtml = Array.isArray(opts.buttons) && opts.buttons.length > 0
+      ? `<div class="modal-dynamic-actions">${opts.buttons.map((b, i) => `
+          <button class="btn-gothic ${b.variant === 'primary' ? 'btn-primary' : ''}" data-modal-btn-idx="${i}">
+            <span>${b.label || 'Confirmar'}</span>
+          </button>
+        `).join('')}</div>`
+      : '';
+
+    return `<div class="modal-dynamic-layout">${imageHtml}${textHtml}${buttonsHtml}</div>`;
+  }
+
+  getGothicRoseSvg() {
+    return `
+      <svg viewBox="0 0 64 64" class="gothic-rose-svg" aria-hidden="true">
+        <defs>
+          <radialGradient id="roseGrad" cx="45%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#8b5cf6"/>
+            <stop offset="45%" stop-color="#4c1d95"/>
+            <stop offset="100%" stop-color="#170b2b"/>
+          </radialGradient>
+        </defs>
+        <path d="M32 8 C42 8, 52 16, 52 28 C52 44, 40 54, 32 54 C24 54, 12 44, 12 28 C12 16, 22 8, 32 8 Z" fill="url(#roseGrad)" stroke="#9ca3af" stroke-width="1.2"/>
+        <path d="M32 14 C39 14, 46 20, 45 29 C44 38, 37 45, 32 45 C27 45, 20 38, 19 29 C18 20, 25 14, 32 14 Z" fill="#2e1065" stroke="#a58ae8" stroke-width="1"/>
+        <path d="M32 19 C36 19, 40 23, 39 29 C38 34, 35 37, 32 37 C29 37, 26 34, 25 29 C24 23, 28 19, 32 19 Z" fill="#5b21b6" stroke="#c4b5fd" stroke-width="0.9"/>
+        <path d="M32 23 C34 23, 36 25, 35 28 C34 31, 30 31, 29 28 C28 25, 30 23, 32 23 Z" fill="#a78bfa"/>
+        <path d="M16 42 Q10 48 6 46 Q12 38 18 36 Z M48 42 Q54 48 58 46 Q52 38 46 36 Z" fill="#1e1b2e" stroke="#9ca3af" stroke-width="1"/>
+      </svg>
+    `;
+  }
+
+  getAcademyCrestSvg() {
+    return `
+      <svg viewBox="0 0 220 90" class="gothic-crest-svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="crestSilver" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#e5e7eb"/>
+            <stop offset="50%" stop-color="#9ca3af"/>
+            <stop offset="100%" stop-color="#4b5563"/>
+          </linearGradient>
+          <linearGradient id="crestPurple" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c4b5fd"/>
+            <stop offset="100%" stop-color="#6d28d9"/>
+          </linearGradient>
+        </defs>
+        <!-- Crescent Moon -->
+        <path d="M110 6 A11 11 0 1 0 120 22 A8.5 8.5 0 1 1 110 6 Z" fill="#d8b4fe" stroke="#e5e7eb" stroke-width="0.8"/>
+        <!-- Gothic Academy Silhouette -->
+        <path d="M62 70 L62 48 L70 32 L78 48 L78 42 L88 24 L98 42 L98 34 L110 18 L122 34 L122 42 L132 24 L142 42 L142 48 L150 32 L158 48 L158 70 Z"
+              fill="#111324" stroke="url(#crestSilver)" stroke-width="1.6" stroke-linejoin="round"/>
+        <!-- Glowing Windows & Portal -->
+        <rect x="86" y="46" width="4" height="10" rx="2" fill="url(#crestPurple)"/>
+        <rect x="130" y="46" width="4" height="10" rx="2" fill="url(#crestPurple)"/>
+        <path d="M106 70 L106 50 Q110 43 114 50 L114 70 Z" fill="url(#crestPurple)"/>
+        <rect x="70" y="52" width="3" height="8" rx="1.5" fill="#8b5cf6"/>
+        <rect x="147" y="52" width="3" height="8" rx="1.5" fill="#8b5cf6"/>
+        <!-- Ornate Filigree Wings -->
+        <path d="M24 72 Q60 66 95 74 L110 82 L125 74 Q160 66 196 72 Q165 78 130 78 L110 87 L90 78 Q55 78 24 72 Z"
+              fill="#181a2e" stroke="url(#crestSilver)" stroke-width="1.3"/>
+        <!-- Center 4-point Luminous Star -->
+        <polygon points="110,67 113,75 121,78 113,81 110,89 107,81 99,78 107,75" fill="#c4b5fd" stroke="#fff" stroke-width="0.6"/>
+      </svg>
+    `;
+  }
+
+  openModal(title, contentOrOptions) {
+    // Immediate cleanup if another modal is already open to avoid race conditions
+    if (this.activeModal) {
+      this.activeModal.remove();
+      this.activeModal = null;
+    }
+    if (this._modalEscHandler) {
+      document.removeEventListener('keydown', this._modalEscHandler);
+      this._modalEscHandler = null;
+    }
+
+    const bodyHtml = this.buildModalBodyHtml(contentOrOptions);
     const modalBackdrop = document.createElement('div');
     modalBackdrop.className = 'modal-backdrop';
     modalBackdrop.id = 'active-modal';
     modalBackdrop.innerHTML = `
-      <div class="gothic-modal" role="dialog" aria-modal="true">
-        <div class="modal-header">
-          <h2 class="modal-title">${title}</h2>
-          <button class="modal-close-btn" id="modal-close-x" aria-label="Fechar">&times;</button>
-        </div>
-        <div class="modal-body">
-          ${contentHtml}
+      <div class="gothic-modal" role="dialog" aria-modal="true" aria-labelledby="gothic-modal-title">
+        <!-- Top Academy Crest -->
+        <div class="modal-academy-crest">${this.getAcademyCrestSvg()}</div>
+
+        <!-- Top-left 4-point star emblem -->
+        <div class="modal-corner-star" aria-hidden="true">✦</div>
+
+        <!-- Gothic Roses on corners -->
+        <div class="modal-rose rose-top-left">${this.getGothicRoseSvg()}</div>
+        <div class="modal-rose rose-bottom-left">${this.getGothicRoseSvg()}</div>
+        <div class="modal-rose rose-bottom-right">${this.getGothicRoseSvg()}</div>
+
+        <!-- Bottom center star ornament -->
+        <div class="modal-bottom-star" aria-hidden="true">✦</div>
+
+        <!-- Close Button (Top Right) -->
+        <button class="modal-close-btn" id="modal-close-x" aria-label="Fechar">✕</button>
+
+        <div class="modal-inner-frame">
+          <div class="modal-header">
+            <h2 class="modal-title" id="gothic-modal-title">${title}</h2>
+          </div>
+          <div class="modal-body" id="gothic-modal-body">
+            ${bodyHtml}
+          </div>
         </div>
       </div>
     `;
+
     this.root.appendChild(modalBackdrop);
+
+    // Bind dynamic buttons if options object was passed
+    if (contentOrOptions && typeof contentOrOptions === 'object' && Array.isArray(contentOrOptions.buttons)) {
+      contentOrOptions.buttons.forEach((btnCfg, idx) => {
+        const el = modalBackdrop.querySelector(`[data-modal-btn-idx="${idx}"]`);
+        if (el && typeof btnCfg.onClick === 'function') {
+          el.onclick = () => btnCfg.onClick(this);
+        }
+      });
+    }
+
     document.getElementById('modal-close-x').onclick = () => this.closeModal();
     modalBackdrop.onclick = (e) => {
       if (e.target === modalBackdrop) this.closeModal();
     };
+
+    this._modalEscHandler = (e) => {
+      if (e.key === 'Escape') this.closeModal();
+    };
+    document.addEventListener('keydown', this._modalEscHandler);
+
     this.activeModal = modalBackdrop;
   }
 
+  updateModalContent(title, contentOrOptions) {
+    if (!this.activeModal) {
+      this.openModal(title, contentOrOptions);
+      return;
+    }
+    const titleEl = document.getElementById('gothic-modal-title');
+    const bodyEl = document.getElementById('gothic-modal-body');
+    if (titleEl && title !== undefined && title !== null) {
+      titleEl.innerHTML = title;
+    }
+    if (bodyEl) {
+      bodyEl.innerHTML = this.buildModalBodyHtml(contentOrOptions);
+      if (contentOrOptions && typeof contentOrOptions === 'object' && Array.isArray(contentOrOptions.buttons)) {
+        contentOrOptions.buttons.forEach((btnCfg, idx) => {
+          const el = bodyEl.querySelector(`[data-modal-btn-idx="${idx}"]`);
+          if (el && typeof btnCfg.onClick === 'function') {
+            el.onclick = () => btnCfg.onClick(this);
+          }
+        });
+      }
+    }
+  }
+
   closeModal() {
+    if (this._modalEscHandler) {
+      document.removeEventListener('keydown', this._modalEscHandler);
+      this._modalEscHandler = null;
+    }
     if (this.activeModal) {
-      this.activeModal.remove();
+      const closingEl = this.activeModal;
       this.activeModal = null;
+      closingEl.classList.add('is-closing');
+      setTimeout(() => {
+        if (closingEl && closingEl.parentNode) {
+          closingEl.remove();
+        }
+      }, 220);
     }
   }
 
