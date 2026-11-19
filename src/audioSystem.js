@@ -10,6 +10,12 @@ class AudioSystem {
   constructor() {
     this.ctx = null;
     this.isMuted = false;
+    this.musicEnabled = true;
+    this.youtubeVideoId = 'SQM38DJdaeU';
+    this.ytPlayer = null;
+    this.ytReady = false;
+    this.ytPendingPlay = false;
+    this._ytApiLoading = false;
     
     // Configurações e Volumes (0 a 100)
     this.volumes = {
@@ -90,10 +96,128 @@ class AudioSystem {
     });
 
     if (this.currentMusicAudio) {
-      this.currentMusicAudio.volume = (this.volumes.master / 100) * (this.volumes.music / 100) * (this.isMuted ? 0 : 1);
+      this.currentMusicAudio.volume = (this.volumes.master / 100) * (this.volumes.music / 100) * (this.isMuted || !this.musicEnabled ? 0 : 1);
     }
     if (this.currentAmbienceAudio) {
-      this.currentAmbienceAudio.volume = (this.volumes.master / 100) * (this.volumes.ambience / 100) * (this.isMuted ? 0 : 1);
+      this.currentAmbienceAudio.volume = (this.volumes.master / 100) * (this.volumes.ambience / 100) * (this.isMuted ? 0 : 0.45);
+    }
+    this.updateYouTubeVolume();
+  }
+
+  // --- CONTROLE DO PLAYER YOUTUBE PARA MÚSICA DE FUNDO ---
+  initYouTubePlayer() {
+    if (typeof document === 'undefined' || this.ytPlayer || this._ytApiLoading) return;
+    this._ytApiLoading = true;
+
+    let container = document.getElementById('noctaria-yt-music-player');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'noctaria-yt-music-player';
+      container.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0.001;pointer-events:none;';
+      document.body.appendChild(container);
+    }
+
+    const createPlayer = () => {
+      if (this.ytPlayer || !window.YT || !window.YT.Player) return;
+      this.ytPlayer = new window.YT.Player('noctaria-yt-music-player', {
+        height: '1',
+        width: '1',
+        videoId: this.youtubeVideoId,
+        playerVars: {
+          autoplay: 0,
+          loop: 1,
+          playlist: this.youtubeVideoId,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          rel: 0
+        },
+        events: {
+          onReady: () => {
+            this.ytReady = true;
+            this.updateYouTubeVolume();
+            if (this.ytPendingPlay && this.musicEnabled && !this.isMuted) {
+              try {
+                this.ytPlayer.playVideo();
+              } catch (e) {}
+            }
+          },
+          onStateChange: (event) => {
+            // Garantir loop contínuo se terminar
+            if (window.YT && event.data === window.YT.PlayerState.ENDED && this.musicEnabled && !this.isMuted) {
+              try {
+                this.ytPlayer.seekTo(0);
+                this.ytPlayer.playVideo();
+              } catch (e) {}
+            }
+          }
+        }
+      });
+    };
+
+    if (window.YT && window.YT.Player) {
+      createPlayer();
+      return;
+    }
+
+    const prevCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prevCallback === 'function') prevCallback();
+      createPlayer();
+    };
+
+    if (!document.getElementById('youtube-iframe-api')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-iframe-api';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+  }
+
+  updateYouTubeVolume() {
+    if (!this.ytPlayer || !this.ytReady) return;
+    try {
+      if (this.isMuted || !this.musicEnabled) {
+        this.ytPlayer.mute();
+        this.ytPlayer.pauseVideo();
+      } else {
+        this.ytPlayer.unMute();
+        const vol = Math.round((this.volumes.master / 100) * (this.volumes.music / 100) * 100);
+        this.ytPlayer.setVolume(Math.max(0, Math.min(100, vol)));
+      }
+    } catch (e) {}
+  }
+
+  setMusicEnabled(enabled) {
+    this.musicEnabled = Boolean(enabled);
+    this.savePreferences();
+    if (!this.musicEnabled) {
+      this.ytPendingPlay = false;
+      this.stopMusic(0.4);
+      this.updateYouTubeVolume();
+    } else {
+      this.playMusic(this.currentMusicId || 'exploration');
+    }
+  }
+
+  unlockOnGesture() {
+    this.resumeContext();
+    if (this.musicEnabled && !this.isMuted) {
+      if (this.ytPlayer && this.ytReady) {
+        try {
+          const state = this.ytPlayer.getPlayerState?.();
+          if (state !== 1) {
+            this.updateYouTubeVolume();
+            this.ytPlayer.playVideo();
+          }
+        } catch (e) {}
+      } else if (this.ytPendingPlay) {
+        this.initYouTubePlayer();
+      }
+    }
+    if (this.currentAmbienceAudio && this.currentAmbienceAudio.paused) {
+      this.currentAmbienceAudio.play().catch(() => {});
     }
   }
 
@@ -105,6 +229,9 @@ class AudioSystem {
         const parsed = JSON.parse(saved);
         this.volumes = { ...this.volumes, ...parsed.volumes };
         this.isMuted = !!parsed.isMuted;
+        if (typeof parsed.musicEnabled === 'boolean') {
+          this.musicEnabled = parsed.musicEnabled;
+        }
       }
     } catch (e) {
       console.warn('Erro ao carregar preferências de áudio:', e);
@@ -115,7 +242,8 @@ class AudioSystem {
     try {
       localStorage.setItem('noctaria_audio_settings', JSON.stringify({
         volumes: this.volumes,
-        isMuted: this.isMuted
+        isMuted: this.isMuted,
+        musicEnabled: this.musicEnabled
       }));
     } catch (e) {
       console.warn('Erro ao salvar preferências de áudio:', e);
@@ -136,60 +264,23 @@ class AudioSystem {
     this.applyVolumes();
   }
 
-  // --- REPRODUÇÃO DE TRILHA SONORA COM CROSSFADE ---
+  // --- REPRODUÇÃO DE TRILHA SONORA (YOUTUBE + FALLBACK) ---
   playMusic(musicId, fadeDuration = 1.5) {
-    if (this.currentMusicId === musicId && this.currentMusicAudio && !this.currentMusicAudio.paused) {
+    this.currentMusicId = musicId || 'exploration';
+    if (!this.musicEnabled || this.isMuted) {
+      this.ytPendingPlay = false;
+      this.updateYouTubeVolume();
       return;
     }
 
-    const musicMap = {
-      menu: '/assets/audio/music/menu_theme.wav',
-      exploration: '/assets/audio/music/exploration_theme.wav',
-      tension: '/assets/audio/music/tension_theme.wav'
-    };
-
-    const targetSrc = musicMap[musicId];
-    if (!targetSrc) return;
-
-    this.currentMusicId = musicId;
-    const oldAudio = this.currentMusicAudio;
-
-    // Fade out antiga música
-    if (oldAudio) {
-      let currentVol = oldAudio.volume;
-      const step = currentVol / (fadeDuration * 20);
-      const fadeInterval = setInterval(() => {
-        currentVol = Math.max(0, currentVol - step);
-        oldAudio.volume = currentVol;
-        if (currentVol <= 0.01) {
-          clearInterval(fadeInterval);
-          oldAudio.pause();
-          oldAudio.currentTime = 0;
-        }
-      }, 50);
+    this.ytPendingPlay = true;
+    this.initYouTubePlayer();
+    if (this.ytPlayer && this.ytReady) {
+      try {
+        this.updateYouTubeVolume();
+        this.ytPlayer.playVideo();
+      } catch (e) {}
     }
-
-    // Criar e iniciar nova música
-    const newAudio = new Audio(targetSrc);
-    newAudio.loop = true;
-    const targetVolume = (this.volumes.master / 100) * (this.volumes.music / 100) * (this.isMuted ? 0 : 1);
-    newAudio.volume = 0;
-    
-    newAudio.play().then(() => {
-      let vol = 0;
-      const step = targetVolume / (fadeDuration * 20);
-      const fadeInInterval = setInterval(() => {
-        vol = Math.min(targetVolume, vol + step);
-        newAudio.volume = vol;
-        if (vol >= targetVolume) {
-          clearInterval(fadeInInterval);
-        }
-      }, 50);
-    }).catch(err => {
-      console.log('Autoplay bloqueado pelo navegador até o primeiro clique:', err.message);
-    });
-
-    this.currentMusicAudio = newAudio;
   }
 
   stopMusic(fadeDuration = 1.0) {
@@ -225,10 +316,19 @@ class AudioSystem {
 
     const audio = new Audio(src);
     audio.loop = true;
-    audio.volume = (this.volumes.master / 100) * (this.volumes.ambience / 100) * (this.isMuted ? 0 : 1);
+    audio.volume = (this.volumes.master / 100) * (this.volumes.ambience / 100) * (this.isMuted ? 0 : 0.25);
     audio.play().catch(() => {});
     this.currentAmbienceAudio = audio;
     this.currentAmbienceId = ambienceId;
+  }
+
+  stopAmbience() {
+    if (this.currentAmbienceAudio) {
+      this.currentAmbienceAudio.pause();
+      this.currentAmbienceAudio.currentTime = 0;
+      this.currentAmbienceAudio = null;
+      this.currentAmbienceId = null;
+    }
   }
 
   // --- REPRODUTOR DE EFEITOS SONOROS (SFX COM ÁUDIO ESPACIAL ESTÉREO) ---
@@ -286,28 +386,12 @@ class AudioSystem {
     this.playSfx(pool[nextIdx], 'human', pan, isRunning ? 1.0 : 0.85);
   }
 
-  // --- RESPIRAÇÃO DINÂMICA (CALMA OU OFEGANTE) ---
+  // --- RESPIRAÇÃO DINÂMICA (desativada para evitar som ecoando em segundo plano) ---
   startBreathingLoop() {
-    if (this.breathingInterval) return;
-
-    const playCycle = () => {
-      if (this.isTense) {
-        const tensePool = [
-          '/assets/audio/sfx/human/breath_tense_1.wav',
-          '/assets/audio/sfx/human/breath_tense_2.wav'
-        ];
-        const idx = Math.floor(Math.random() * tensePool.length);
-        this.playSfx(tensePool[idx], 'human', 0.0, 0.9);
-      } else {
-        // Respiração calma espaçada
-        this.playSfx('/assets/audio/sfx/human/breath_calm.wav', 'human', 0.0, 0.45);
-      }
-    };
-
-    // Respiração regular suave a cada 7 segundos, ou a cada 2.5s se tensa
-    this.breathingInterval = setInterval(() => {
-      playCycle();
-    }, this.isTense ? 3000 : 7500);
+    if (this.breathingInterval) {
+      clearInterval(this.breathingInterval);
+      this.breathingInterval = null;
+    }
   }
 
   setTensionLevel(isTense = false) {
@@ -325,7 +409,7 @@ class AudioSystem {
     }
   }
 
-  // --- SONS DE PORTAS ---
+  // --- SONS DE PORTAS E PORTÃO ---
   playDoor(action = 'open', pan = 0.0) {
     const doorMap = {
       handle: '/assets/audio/sfx/doors/door_handle.wav',
@@ -338,6 +422,13 @@ class AudioSystem {
     }
   }
 
+  playGate(pan = 0.0) {
+    this.playSfx('/assets/audio/sfx/interaction/keys_jingle.wav', 'sfx', pan, 0.9);
+    setTimeout(() => {
+      this.playSfx('/assets/audio/sfx/doors/door_open_creak.wav', 'sfx', pan, 0.95);
+    }, 180);
+  }
+
   // --- SONS DE INTERAÇÃO COM O MUNDO ---
   playInteraction(type = 'paper', pan = 0.0) {
     const interactMap = {
@@ -345,10 +436,11 @@ class AudioSystem {
       keys: '/assets/audio/sfx/interaction/keys_jingle.wav',
       drawer: '/assets/audio/sfx/interaction/drawer_open.wav',
       lever: '/assets/audio/sfx/interaction/switch_lever.wav',
-      spell: '/assets/audio/sfx/interaction/spell_cast.wav'
+      spell: '/assets/audio/sfx/interaction/spell_cast.wav',
+      painting: '/assets/audio/sfx/ambience/old_wood_creaks.wav'
     };
     if (interactMap[type]) {
-      this.playSfx(interactMap[type], 'sfx', pan);
+      this.playSfx(interactMap[type], 'sfx', pan, type === 'painting' ? 0.65 : 1.0);
     }
   }
 

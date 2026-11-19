@@ -48,6 +48,17 @@ class NoctariaGame {
 
     this.loadState();
 
+    // Desbloqueio de áudio no primeiro gesto e som de clique em todos os botões
+    this.setupGlobalAudioEvents();
+  }
+
+  setupGlobalAudioEvents() {
+    if (this._globalAudioBound) return;
+    this._globalAudioBound = true;
+
+    const unlock = () => audioSystem.unlockOnGesture();
+    window.addEventListener('pointerdown', unlock, { passive: true });
+    window.addEventListener('keydown', unlock, { passive: true });
   }
 
 
@@ -102,9 +113,10 @@ class NoctariaGame {
 
   resetGame() {
     this.state = JSON.parse(JSON.stringify(INITIAL_STATE));
+    this.state.corridor3d = { active: false, transform: null };
     this.saveGame();
-    // Entrar diretamente no jogo (exploração 3D)
-    this.enter3DCorridor();
+    this.changeChapter('prologue', false);
+    this.startDialogue('elias_arrival', 'start');
   }
 
 
@@ -829,7 +841,14 @@ class NoctariaGame {
 
         this.loadState();
 
-        this.renderGameWorld();
+        if (this.state.corridor3d && this.state.corridor3d.active) {
+          this.enter3DCorridor({
+            startInBasement: this.state.currentChapter === 'phase_1',
+            savedTransform: this.state.corridor3d.transform || null
+          });
+        } else {
+          this.renderGameWorld();
+        }
 
         this.showNotification('Jornada restaurada com sucesso!', 'info');
 
@@ -853,7 +872,6 @@ class NoctariaGame {
   // --- MODO DE EXPLORAÇÃO 3D DO CORREDOR E DA SALA DA DIRETORIA NO PORÃO ---
   enter3DCorridor(options = {}) {
     audioSystem.playAmbience('corridor');
-    audioSystem.startBreathingLoop();
 
     const isBasement = (options && options.startInBasement) || this.state.currentChapter === 'phase_1';
     const hudTitle = isBasement ? 'Salão das Cinzas • Sala da Diretoria (Fase 1)' : 'Corredor dos Ecos Ancestrais';
@@ -1007,25 +1025,21 @@ class NoctariaGame {
     };
 
     const restartGame = () => {
-      if (confirm('Deseja realmente reiniciar o jogo do início? Seu progresso atual será reiniciado.')) {
-        if (document.pointerLockElement) document.exitPointerLock?.();
-        if (this.activeCorridor3D) {
-          this.activeCorridor3D.dispose();
-          this.activeCorridor3D = null;
-        }
-        this.resetGame();
+      if (document.pointerLockElement) document.exitPointerLock?.();
+      if (this.activeCorridor3D) {
+        this.activeCorridor3D.dispose();
+        this.activeCorridor3D = null;
       }
+      this.resetGame();
     };
 
     const exitGame = () => {
-      if (confirm('Deseja sair do jogo e retornar ao menu principal?')) {
-        if (document.pointerLockElement) document.exitPointerLock?.();
-        if (this.activeCorridor3D) {
-          this.activeCorridor3D.dispose();
-          this.activeCorridor3D = null;
-        }
-        this.renderMainMenu();
+      if (document.pointerLockElement) document.exitPointerLock?.();
+      if (this.activeCorridor3D) {
+        this.activeCorridor3D.dispose();
+        this.activeCorridor3D = null;
       }
+      this.renderMainMenu();
     };
 
     const resumeBtn = document.getElementById('corridor-resume-btn');
@@ -1056,8 +1070,23 @@ class NoctariaGame {
     }
 
     const container = document.getElementById('corridor-3d-canvas-container');
+    const savedTransform = options.savedTransform || null;
+    this.state.corridor3d = {
+      active: true,
+      transform: savedTransform
+    };
+    this.saveGame();
+
     this.activeCorridor3D = new Corridor3DScene(container, {
       startInBasement: isBasement,
+      savedTransform,
+      onSaveTransform: (transform) => {
+        this.state.corridor3d = {
+          active: true,
+          transform
+        };
+        this.saveGame();
+      },
       onResumeGame: () => resumeGame(),
       onRestartGame: () => restartGame(),
       onExitGame: () => exitGame(),
@@ -1098,7 +1127,11 @@ class NoctariaGame {
         this.examineStairPainting();
       },
       onEnterLibrary: () => {
-        const allCluesFound = (this.flags.noticeBoardExamined && this.flags.erasedPhotoExamined && this.flags.alteredLedgerExamined) || this.flags.phase1Completed;
+        const allCluesFound = Boolean(
+          this.flags.noticeBoardExamined &&
+          this.flags.erasedPhotoExamined &&
+          this.flags.alteredLedgerExamined
+        );
         if (allCluesFound) {
           if (this.activeCorridor3D && this.activeCorridor3D.libraryGateProps) {
             this.activeCorridor3D.libraryGateProps.isUnlocked = true;
@@ -1110,15 +1143,37 @@ class NoctariaGame {
             }
           }
           this.showNotification('✦ O cadeado se abre e o portal para a Biblioteca Velada foi liberado! ✦', 'quest');
+          audioSystem.playGate();
           if (document.pointerLockElement) document.exitPointerLock?.();
           setTimeout(() => {
+            if (this.activeCorridor3D) {
+              this.activeCorridor3D.dispose();
+              this.activeCorridor3D = null;
+            }
+            this.state.corridor3d = { active: false, transform: null };
             this.changeChapter('phase_2');
           }, 800);
         } else {
-          this.showNotification('🔒 O portão está trancado com um cadeado de ferro. Visualize todas as pistas da sala para atravessar o portal!', 'warning');
+          const faltando = [];
+          if (!this.flags.noticeBoardExamined) faltando.push('Mural de Avisos');
+          if (!this.flags.erasedPhotoExamined) faltando.push('Retrato Adulterado');
+          if (!this.flags.alteredLedgerExamined) faltando.push('Livro de Matrículas');
+          this.showNotification(`🔒 Portão trancado! Examine todas as pistas da sala antes de avançar (Falta: ${faltando.join(', ')}).`, 'warning');
         }
       }
     });
+
+    if (this.flags.noticeBoardExamined && this.flags.erasedPhotoExamined && this.flags.alteredLedgerExamined) {
+      if (this.activeCorridor3D && this.activeCorridor3D.libraryGateProps) {
+        this.activeCorridor3D.libraryGateProps.isUnlocked = true;
+        if (this.activeCorridor3D.libraryGateProps.padlockGroup) {
+          this.activeCorridor3D.libraryGateProps.padlockGroup.visible = false;
+        }
+        if (this.activeCorridor3D.libraryGateProps.ironGateGroup) {
+          this.activeCorridor3D.libraryGateProps.ironGateGroup.rotation.y = Math.PI * 0.45;
+        }
+      }
+    }
 
     if (menuToggleBtn && menuPanel) {
       menuToggleBtn.onclick = (e) => {
@@ -1313,14 +1368,25 @@ class NoctariaGame {
   // --- CENA JOGÁVEL E VIEWPORT ---
 
   renderGameWorld() {
+    if (this.activeCorridor3D) {
+      this.activeCorridor3D.dispose();
+      this.activeCorridor3D = null;
+    }
+
     if (this.state.currentChapter === 'phase_1') {
-      this.enter3DCorridor({ startInBasement: true });
+      this.enter3DCorridor({
+        startInBasement: true,
+        savedTransform: this.state.corridor3d?.transform || null
+      });
       return;
     }
 
+    if (this.state.corridor3d) {
+      this.state.corridor3d.active = false;
+    }
+
     audioSystem.playMusic('exploration');
-    audioSystem.playAmbience('corridor');
-    audioSystem.startBreathingLoop();
+    audioSystem.stopAmbience();
 
     const sceneId = this.state.currentScene || 'courtyard';
 
@@ -1404,7 +1470,7 @@ class NoctariaGame {
 
         <main class="scene-container">
 
-          <div class="scene-bg" id="scene-bg" style="background-image: url('${bgUrl}');"></div>
+          <div class="scene-bg" id="scene-bg"></div>
 
           <div class="scene-interactive-layer" id="interactive-layer"></div>
 
@@ -1442,7 +1508,10 @@ class NoctariaGame {
 
     `;
 
-
+    const sceneBg = document.getElementById('scene-bg');
+    if (sceneBg) {
+      sceneBg.style.backgroundImage = `url("${bgUrl.replace(/"/g, "'")}")`;
+    }
 
     // Connect topbar buttons
 
@@ -2280,6 +2349,7 @@ class NoctariaGame {
   examineErasedPortrait() {
 
     this.flags.erasedPhotoExamined = true;
+    audioSystem.playInteraction('painting');
 
     this.openInspectModal(
 
@@ -2287,7 +2357,9 @@ class NoctariaGame {
 
       'Uma pintura a óleo da turma honorária de três anos atrás. O rosto da estudante que segura o astrolábio foi meticulosamente raspado com lâmina. No verso da moldura de mogno, uma inscrição a lápis diz: "S. A. — Turma 42".',
 
-      'As iniciais batem exatamente com as letras encontradas no mural!'
+      'Biografia do Retrato: Retrato oficial da Turma Honorária 42 da Academia Noctária. Ao centro, entre os demais alunos formandos, destaca-se a estudante misteriosa segurando o astrolábio de latão — cujo rosto foi apagado à força — acompanhada pelas iniciais "S. A." gravadas no verso da moldura. As iniciais batem exatamente com as letras encontradas no mural!',
+
+      '/assets/images/retrato_turma42.jpg'
 
     );
 
@@ -2325,7 +2397,7 @@ class NoctariaGame {
   }
 
   examineStairPainting() {
-    if (this.audioSystem) this.audioSystem.playInteraction('crystal');
+    audioSystem.playInteraction('painting');
     this.openInspectModal(
       'A Guardiã do Horizonte Obscuro',
       'Uma pintura a óleo barroca com moldura entalhada em ouro envelhecido. Ela retrata a torre leste da Academia Noctária sob uma névoa violeta espectral, com luas gêmeas e constelações arcanas refletidas em águas abissais.\\n\\nUma placa em latão diz: "Àqueles que buscam a verdade nos alicerces mais profundos: a luz é apenas a sombra da memória."',
@@ -2334,9 +2406,7 @@ class NoctariaGame {
   }
 
   openLedgerBookModal() {
-    if (this.audioSystem) {
-      try { this.audioSystem.playInteraction('paper'); } catch (e) {}
-    }
+    audioSystem.playInteraction('paper');
     const existing = document.getElementById('ledgerBookModal');
     if (existing) existing.remove();
 
@@ -2463,17 +2533,13 @@ class NoctariaGame {
       if (isClosing) return;
       isClosing = true;
       window.removeEventListener('keydown', onLedgerKeyDown);
-      if (this.audioSystem) {
-        try { this.audioSystem.playInteraction('paper'); } catch (e) {}
-      }
+      audioSystem.playInteraction('paper');
       overlay.classList.add('ledger-fade-out');
       setTimeout(() => overlay.remove(), 260);
     };
 
     const flipTo = (page) => {
-      if (this.audioSystem) {
-        try { this.audioSystem.playInteraction('paper'); } catch (e) {}
-      }
+      audioSystem.playInteraction('paper');
       const stage = document.getElementById('ledgerStageContainer');
       const flipBtn = document.getElementById('btnFlipPage');
       if (stage) {
@@ -2553,7 +2619,17 @@ class NoctariaGame {
 
       });
 
-      this.showNotification('✦ Identidade Descoberta: Seraphine Ashford! Fale com Elias. ✦', 'quest');
+      this.showNotification('✦ Identidade Descoberta: Seraphine Ashford! O portão para a Biblioteca Velada foi destrancado! ✦', 'quest');
+
+      if (this.activeCorridor3D && this.activeCorridor3D.libraryGateProps) {
+        this.activeCorridor3D.libraryGateProps.isUnlocked = true;
+        if (this.activeCorridor3D.libraryGateProps.padlockGroup) {
+          this.activeCorridor3D.libraryGateProps.padlockGroup.visible = false;
+        }
+        if (this.activeCorridor3D.libraryGateProps.ironGateGroup) {
+          this.activeCorridor3D.libraryGateProps.ironGateGroup.rotation.y = Math.PI * 0.45;
+        }
+      }
 
       this.renderSceneInteractiveElements();
 
@@ -4445,8 +4521,6 @@ class NoctariaGame {
 
 
   renderDialogueNode(node) {
-    if (this.activeDialogue && node && node.text) { audioSystem.speakText(node.text, this.activeDialogue.characterId); }
-
     this.currentDialogueNode = node;
 
     const character = CHARACTERS[this.activeDialogue.characterId] || { name: 'Desconhecido', title: '', avatarSvg: '' };
@@ -4980,12 +5054,14 @@ class NoctariaGame {
 
 
 
-  openInspectModal(title, text, subtext = '') {
+  openInspectModal(title, text, subtext = '', imageUrl = '') {
     audioSystem.playInteraction('paper');
 
     const html = `
 
       <div class="letter-parchment">
+
+        ${imageUrl ? `<div style="margin-bottom:16px; text-align:center;"><img src="${imageUrl}" alt="${title}" style="max-width:100%; max-height:320px; border-radius:6px; border:2px solid rgba(196, 155, 56, 0.55); box-shadow:0 8px 24px rgba(0,0,0,0.65); object-fit:contain;"></div>` : ''}
 
         <p style="margin-bottom:14px; white-space:pre-line;">${text}</p>
 
@@ -5072,10 +5148,21 @@ class NoctariaGame {
   openSettingsModal() {
 
     const s = this.state.settings;
+    const isMusicOn = audioSystem.musicEnabled;
 
     const html = `
 
       <div style="display:flex; flex-direction:column; gap:8px;">
+
+        <div class="setting-row">
+
+          <label class="setting-label" for="music-enabled-toggle">Música de Fundo</label>
+
+          <button type="button" class="btn-gothic" id="music-enabled-toggle" style="padding:6px 14px; font-size:0.85rem; min-width:140px;">
+            ${isMusicOn ? '🔊 Com Música' : '🔇 Sem Música'}
+          </button>
+
+        </div>
 
         <div class="setting-row">
 
@@ -5131,6 +5218,16 @@ class NoctariaGame {
 
 
 
+    const musicToggleBtn = document.getElementById('music-enabled-toggle');
+    let pendingMusicEnabled = audioSystem.musicEnabled;
+    if (musicToggleBtn) {
+      musicToggleBtn.onclick = () => {
+        pendingMusicEnabled = !pendingMusicEnabled;
+        audioSystem.setMusicEnabled(pendingMusicEnabled);
+        musicToggleBtn.textContent = pendingMusicEnabled ? '🔊 Com Música' : '🔇 Sem Música';
+      };
+    }
+
     document.getElementById('fullscreen-toggle').onclick = () => {
 
       if (!document.fullscreenElement) {
@@ -5154,6 +5251,11 @@ class NoctariaGame {
       this.state.settings.sfxVolume = parseInt(document.getElementById('sfx-vol').value);
 
       this.state.settings.textSpeed = document.getElementById('speed-select').value;
+
+      audioSystem.volumes.music = this.state.settings.musicVolume;
+      audioSystem.volumes.sfx = this.state.settings.sfxVolume;
+      audioSystem.applyVolumes();
+      audioSystem.savePreferences();
 
       this.saveGame();
 
@@ -5209,21 +5311,12 @@ class NoctariaGame {
 
 window.addEventListener('DOMContentLoaded', () => {
 
-    // Audio feedback global para botões e opções
+    // Audio feedback global para botões e opções (sem som de hover/rodopio)
     document.addEventListener('click', (e) => {
       audioSystem.resumeContext();
-      const targetBtn = e.target.closest('button, .hotspot, .dialogue-opt-btn, .inventory-card, .map-card');
+      const targetBtn = e.target.closest('button, .btn-gothic, .nav-btn, .corridor-menu-btn, .corridor-menu-toggle-btn, .hotspot, .dialogue-opt-btn, .dialogue-option, .mobile-action-btn, .ledger-nav-btn, .primary-btn, .btn-unfold-action, .btn-parchment-nav, .btn-enter-gate, .inventory-card, .map-card');
       if (targetBtn) {
         audioSystem.playUi('click');
-      }
-    });
-
-    document.addEventListener('mouseover', (e) => {
-      const hoverTarget = e.target.closest('button, .hotspot, .dialogue-opt-btn');
-      if (hoverTarget && !hoverTarget.dataset.hoverSound) {
-        hoverTarget.dataset.hoverSound = '1';
-        audioSystem.playUi('hover');
-        setTimeout(() => { delete hoverTarget.dataset.hoverSound; }, 200);
       }
     });
 
